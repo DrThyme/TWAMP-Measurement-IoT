@@ -38,30 +38,27 @@
 #include "net/ipv6/uip-ds6.h"
 #include "net/ip/uip-debug.h"
 
-#include "sys/node-id.h"
+#include "../tools/cooja/git/TWAMP-Measurement-IoT/twamp.h"
 
 #include "simple-udp.h"
 #include "servreg-hack.h"
 
+#include "net/rpl/rpl.h"
+
 #include <stdio.h>
 #include <string.h>
-
-#include "../tools/cooja/git/TWAMP-Measurement-IoT/twamp.h"
 
 #define UDP_PORT 1234
 #define SERVICE_ID 190
 
-#define SEND_INTERVAL		(60 * CLOCK_SECOND)
+#define SEND_INTERVAL		(10 * CLOCK_SECOND)
 #define SEND_TIME		(random_rand() % (SEND_INTERVAL))
 
 static struct simple_udp_connection unicast_connection;
-
-static unsigned int seq_id;
-static uip_ipaddr_t *addr;
-
+static SenderUAuthPacket acutalData;
 /*---------------------------------------------------------------------------*/
-PROCESS(unicast_sender_process, "Unicast sender example process");
-AUTOSTART_PROCESSES(&unicast_sender_process);
+PROCESS(unicast_receiver_process, "Unicast receiver example process");
+AUTOSTART_PROCESSES(&unicast_receiver_process);
 /*---------------------------------------------------------------------------*/
 static void
 receiver(struct simple_udp_connection *c,
@@ -69,17 +66,26 @@ receiver(struct simple_udp_connection *c,
          uint16_t sender_port,
          const uip_ipaddr_t *receiver_addr,
          uint16_t receiver_port,
-         const uint8_t *data,
+         struct sender_unauthenticated_test* data,
          uint16_t datalen)
 {
-  printf("Data received on port %d from port %d with length %d\n",
-         receiver_port, sender_port, datalen);
+  printf("Data received from ");  
+  memcpy(&acutalData, data, datalen);
+  uip_debug_ipaddr_print(sender_addr);
+  printf(" on port %d from port %d \n",
+         receiver_port, sender_port);
+
+  //Prints for debugging
+  printf("SeqNo: %d\n", acutalData.SeqNo);
+  printf("Seconds: %d\n", acutalData.Timestamp.second);
+  printf("Micro: %d\n", acutalData.Timestamp.microsecond);
+  printf("Error: %d\n", acutalData.ErrorEstimate);
 }
 /*---------------------------------------------------------------------------*/
-static void
+static uip_ipaddr_t *
 set_global_address(void)
 {
-  uip_ipaddr_t ipaddr;
+  static uip_ipaddr_t ipaddr;
   int i;
   uint8_t state;
 
@@ -96,57 +102,50 @@ set_global_address(void)
       printf("\n");
     }
   }
+
+  return &ipaddr;
 }
 /*---------------------------------------------------------------------------*/
 static void
-send_to(){
-
-}
-
-/*---------------------------------------------------------------------------*/
-PROCESS_THREAD(unicast_sender_process, ev, data)
+create_rpl_dag(uip_ipaddr_t *ipaddr)
 {
-  static struct etimer periodic_timer;
-  static struct etimer send_timer;
-  
+  struct uip_ds6_addr *root_if;
+
+  root_if = uip_ds6_addr_lookup(ipaddr);
+  if(root_if != NULL) {
+    rpl_dag_t *dag;
+    uip_ipaddr_t prefix;
+    
+    rpl_set_root(RPL_DEFAULT_INSTANCE, ipaddr);
+    dag = rpl_get_any_dag();
+    uip_ip6addr(&prefix, 0xaaaa, 0, 0, 0, 0, 0, 0, 0);
+    rpl_set_prefix(dag, &prefix, 64);
+    PRINTF("created a new RPL dag\n");
+  } else {
+    PRINTF("failed to create a new RPL DAG\n");
+  }
+}
+/*---------------------------------------------------------------------------*/
+PROCESS_THREAD(unicast_receiver_process, ev, data)
+{
+  uip_ipaddr_t *ipaddr;
+
   PROCESS_BEGIN();
 
   servreg_hack_init();
 
-  set_global_address();
+  ipaddr = set_global_address();
+
+  create_rpl_dag(ipaddr);
+
+  servreg_hack_register(SERVICE_ID, ipaddr);
 
   simple_udp_register(&unicast_connection, UDP_PORT,
                       NULL, UDP_PORT, receiver);
 
-  etimer_set(&periodic_timer, SEND_INTERVAL);
   while(1) {
-
-    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
-    etimer_reset(&periodic_timer);
-    etimer_set(&send_timer, SEND_TIME);
-
-    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&send_timer));
-    addr = servreg_hack_lookup(SERVICE_ID);
-    if(addr != NULL) {
-      static struct sender_unauthenticated_test pkt;
-      static struct TWAMPtimestamp t;
-      t.second = 222;
-      t.microsecond = 345;
-      pkt.SeqNo = seq_id;
-      pkt.Timestamp = t;
-      pkt.ErrorEstimate = 666;
-      
-      printf("Sending unicast to ");
-      uip_debug_ipaddr_print(addr);
-      printf("\n");
-      
-      seq_id++;
-      simple_udp_sendto(&unicast_connection, &pkt, sizeof(pkt), addr);
-    } else {
-      printf("Service %d not found\n", SERVICE_ID);
-    }
+    PROCESS_WAIT_EVENT();
   }
-
   PROCESS_END();
 }
 /*---------------------------------------------------------------------------*/
