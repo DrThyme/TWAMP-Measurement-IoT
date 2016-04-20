@@ -53,6 +53,7 @@
 
 #define SEND_INTERVAL		(60 * CLOCK_SECOND)
 #define SEND_TIME		(random_rand() % (SEND_INTERVAL))
+#define AUTH_MODE 0
 
 static struct simple_udp_connection unicast_connection;
 
@@ -86,7 +87,29 @@ receive_unauth(struct reflector_unauthenticated_test reflect_pkt){
 }
 
 
-/*---------------------------------------------------------------------------
+/*---------------------------------------------------------------------------*/
+
+static void
+receive_auth(struct reflector_authenticated_test reflect_pkt){
+
+ 
+//Prints for debugging
+
+  printf("SeqNo: %d\n", reflect_pkt.SeqNo);
+  printf("RS-Seconds: %d\n", reflect_pkt.Timestamp.second);
+  printf("RS-Micro: %d\n", reflect_pkt.Timestamp.microsecond);
+  printf("Error: %d\n", reflect_pkt.ErrorEstimate);
+  
+  printf("Sender SeqNo: %d\n", reflect_pkt.SenderSeqNo);
+  printf("R-Seconds: %d\n", reflect_pkt.ReceiverTimestamp.second);
+  printf("R-Micro: %d\n", reflect_pkt.ReceiverTimestamp.microsecond);
+  printf("Sender Error: %d\n", reflect_pkt.SenderErrorEstimate);
+  
+  printf("S-Seconds: %d\n", reflect_pkt.SenderTimestamp.second);
+  printf("S-Micro: %d\n", reflect_pkt.SenderTimestamp.microsecond);
+  printf("Sender TTL: %d\n", reflect_pkt.SenderTTL);
+}
+
 
 /*---------------------------------------------------------------------------*/
 
@@ -96,18 +119,25 @@ receiver(struct simple_udp_connection *c,
          uint16_t sender_port,
          const uip_ipaddr_t *receiver_addr,
          uint16_t receiver_port,
-         struct reflector_unauthenticated_test *data,
+         const uint8_t *data,
          uint16_t datalen)
 {
-  ReflectorUAuthPacket reflect_pkt;
-
-  printf("Data received from ");  
-  memcpy(&reflect_pkt, data, datalen);
+  printf("Data received from "); 
   uip_debug_ipaddr_print(sender_addr);
   printf(" on port %d from port %d \n",
          receiver_port, sender_port);
+  printf("###############\n");
 
-  receive_unauth(reflect_pkt);
+  if(AUTH_MODE == 0){
+    ReflectorUAuthPacket reflect_pkt;  
+    memcpy(&reflect_pkt, data, datalen);
+    receive_unauth(reflect_pkt);
+  }
+  else if(AUTH_MODE == 1){
+    ReflectorAuthPacket reflect_pkt;  
+    memcpy(&reflect_pkt, data, datalen);
+    receive_auth(reflect_pkt);
+  }
   
  
   
@@ -156,6 +186,25 @@ static struct sender_unauthenticated_test pkt;
 }
 
 /*---------------------------------------------------------------------------*/
+static void
+send_to_auth(){
+static struct sender_authenticated_test pkt;
+      static struct TWAMPtimestamp t;
+      t.second = 222;
+      t.microsecond = 345;
+      pkt.SeqNo = seq_id;
+      pkt.Timestamp = t;
+      pkt.ErrorEstimate = 666;
+      
+      printf("Sending unicast to ");
+      uip_debug_ipaddr_print(addr);
+      printf("\n");
+      
+      seq_id++;
+      simple_udp_sendto(&unicast_connection, &pkt, sizeof(pkt), addr);
+}
+
+/*---------------------------------------------------------------------------*/
 PROCESS_THREAD(unicast_sender_process, ev, data)
 {
   static struct etimer periodic_timer;
@@ -180,7 +229,14 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&send_timer));
     addr = servreg_hack_lookup(SERVICE_ID);
     if(addr != NULL) {
-      send_to_unauth();
+      if(AUTH_MODE == 0){
+	 send_to_unauth();
+      }
+      else if(AUTH_MODE == 1){
+	send_to_auth();
+      }
+
+    
     } else {
       printf("Service %d not found\n", SERVICE_ID);
     }
