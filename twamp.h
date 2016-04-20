@@ -142,7 +142,7 @@ typedef struct sender_authenticated_test{
 typedef struct reflector_authenticated_test{
 	uint32_t SeqNo;
 	uint8_t MBZ1[12];
-	TWAMPtimestamp timestamp;
+	TWAMPtimestamp Timestamp;
 	uint16_t ErrorEstimate;
 	uint8_t MBZ2[6];
 	TWAMPtimestamp ReceiverTimestamp;

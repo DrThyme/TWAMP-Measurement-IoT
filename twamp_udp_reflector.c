@@ -51,40 +51,26 @@
 #define UDP_PORT 1234
 #define SERVICE_ID 190
 
+#define AUTH_MODE 0
+
 #define SEND_INTERVAL		(10 * CLOCK_SECOND)
 #define SEND_TIME		(random_rand() % (SEND_INTERVAL))
 
 static struct simple_udp_connection unicast_connection;
-static uint32_t SeqNo;
+static uint32_t seqno = 0;
 /*---------------------------------------------------------------------------*/
 PROCESS(unicast_receiver_process, "Unicast receiver example process");
 AUTOSTART_PROCESSES(&unicast_receiver_process);
 /*---------------------------------------------------------------------------*/
 static void
-receiver(struct simple_udp_connection *c,
-         const uip_ipaddr_t *sender_addr,
-         uint16_t sender_port,
-         const uip_ipaddr_t *receiver_addr,
-         uint16_t receiver_port,
-         struct sender_unauthenticated_test* data,
-         uint16_t datalen)
+reflect_uauth(struct sender_unauthenticated_test sender_pkt,
+	      struct TWAMPtimestamp ts_rcv,
+              const uip_ipaddr_t *sender_addr)
 {
-  SenderUAuthPacket sender_pkt;
+  //TODO: Set all MBZs to zero!
   ReflectorUAuthPacket reflect_pkt;
 
-  TWAMPtimestamp ts_rcv;
-  TWAMPtimestamp ts_send;
-  //Do proper timestamp here!
-  ts_rcv.second = 1000;
-  ts_rcv.microsecond = 10;
-
-  printf("Data received from ");  
-  memcpy(&sender_pkt, data, datalen);
-  uip_debug_ipaddr_print(sender_addr);
-  printf(" on port %d from port %d \n", receiver_port, sender_port);
-
-  SeqNo++;
-  reflect_pkt.SeqNo = SeqNo;
+  reflect_pkt.SeqNo = seqno;
   reflect_pkt.ErrorEstimate = 999;
   reflect_pkt.ReceiverTimestamp = ts_rcv;
   reflect_pkt.SenderSeqNo = sender_pkt.SeqNo;
@@ -100,10 +86,73 @@ receiver(struct simple_udp_connection *c,
   printf("Packet reflected!\n");
   printf("#################\n");
   //Prints for debugging
-  printf("SeqNo: %d\n", sender_pkt.SeqNo);
-  printf("Seconds: %d\n", sender_pkt.Timestamp.second);
-  printf("Micro: %d\n", sender_pkt.Timestamp.microsecond);
-  printf("Error: %d\n", sender_pkt.ErrorEstimate);
+  printf("SeqNo: %u\n", sender_pkt.SeqNo);
+  printf("Seconds: %u\n", sender_pkt.Timestamp.second);
+  printf("Micro: %u\n", sender_pkt.Timestamp.microsecond);
+  printf("Error: %u\n", sender_pkt.ErrorEstimate);
+  seqno++;
+}
+/*---------------------------------------------------------------------------*/
+static void
+reflect_auth(struct sender_authenticated_test sender_pkt,
+	      struct TWAMPtimestamp ts_rcv,
+              const uip_ipaddr_t *sender_addr)
+{
+  //TODO: Set all MBZs to zero!
+  ReflectorUAuthPacket reflect_pkt;
+
+  reflect_pkt.SeqNo = seqno;
+  reflect_pkt.ErrorEstimate = 999;
+  reflect_pkt.ReceiverTimestamp = ts_rcv;
+  reflect_pkt.SenderSeqNo = sender_pkt.SeqNo;
+  reflect_pkt.SenderTimestamp = sender_pkt.Timestamp;
+  reflect_pkt.SenderErrorEstimate = sender_pkt.ErrorEstimate;
+  reflect_pkt.SenderTTL = 255;
+  //Do proper timestamp here
+  reflect_pkt.Timestamp.second = 111;
+  reflect_pkt.Timestamp.microsecond = 222;
+
+  simple_udp_sendto(&unicast_connection, &reflect_pkt, 
+	sizeof(reflect_pkt), sender_addr);
+  printf("Packet reflected!\n");
+  printf("#################\n");
+  //Prints for debugging
+  printf("SeqNo: %u\n", sender_pkt.SeqNo);
+  printf("Seconds: %u\n", sender_pkt.Timestamp.second);
+  printf("Micro: %u\n", sender_pkt.Timestamp.microsecond);
+  printf("Error: %u\n", sender_pkt.ErrorEstimate);
+  seqno++;
+}
+/*---------------------------------------------------------------------------*/
+static void
+receiver(struct simple_udp_connection *c,
+         const uip_ipaddr_t *sender_addr,
+         uint16_t sender_port,
+         const uip_ipaddr_t *receiver_addr,
+         uint16_t receiver_port,
+	 const uint8_t *data,
+         uint16_t datalen)
+{
+
+  TWAMPtimestamp ts_rcv;
+  //Do proper timestamp here!
+  ts_rcv.second = 1000;
+  ts_rcv.microsecond = 10;
+
+  printf("Data received from ");  
+  uip_debug_ipaddr_print(sender_addr);
+  printf(" on port %d from port %d \n", receiver_port, sender_port);
+  
+  if(AUTH_MODE == 0){
+  	SenderUAuthPacket sender_pkt;
+ 	memcpy(&sender_pkt, data, datalen);
+    	reflect_uauth(sender_pkt,ts_rcv,sender_addr);
+  }else if(AUTH_MODE == 1){
+  	SenderAuthPacket sender_pkt;
+	memcpy(&sender_pkt, data, datalen);
+	reflect_auth(sender_pkt,ts_rcv,sender_addr);
+  }
+  
 }
 /*---------------------------------------------------------------------------*/
 static uip_ipaddr_t *
