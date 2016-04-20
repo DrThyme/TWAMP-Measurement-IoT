@@ -63,18 +63,57 @@ static uip_ipaddr_t *addr;
 PROCESS(unicast_sender_process, "Unicast sender example process");
 AUTOSTART_PROCESSES(&unicast_sender_process);
 /*---------------------------------------------------------------------------*/
+
+static void
+receive_unauth(struct reflector_unauthenticated_test reflect_pkt){
+
+ 
+//Prints for debugging
+
+  printf("SeqNo: %d\n", reflect_pkt.SeqNo);
+  printf("RS-Seconds: %d\n", reflect_pkt.Timestamp.second);
+  printf("RS-Micro: %d\n", reflect_pkt.Timestamp.microsecond);
+  printf("Error: %d\n", reflect_pkt.ErrorEstimate);
+  
+  printf("Sender SeqNo: %d\n", reflect_pkt.SenderSeqNo);
+  printf("R-Seconds: %d\n", reflect_pkt.ReceiverTimestamp.second);
+  printf("R-Micro: %d\n", reflect_pkt.ReceiverTimestamp.microsecond);
+  printf("Sender Error: %d\n", reflect_pkt.SenderErrorEstimate);
+  
+  printf("S-Seconds: %d\n", reflect_pkt.SenderTimestamp.second);
+  printf("S-Micro: %d\n", reflect_pkt.SenderTimestamp.microsecond);
+  printf("Sender TTL: %d\n", reflect_pkt.SenderTTL);
+}
+
+
+/*---------------------------------------------------------------------------
+
+/*---------------------------------------------------------------------------*/
+
 static void
 receiver(struct simple_udp_connection *c,
          const uip_ipaddr_t *sender_addr,
          uint16_t sender_port,
          const uip_ipaddr_t *receiver_addr,
          uint16_t receiver_port,
-         const uint8_t *data,
+         struct reflector_unauthenticated_test *data,
          uint16_t datalen)
 {
-  printf("Data received on port %d from port %d with length %d\n",
-         receiver_port, sender_port, datalen);
+  ReflectorUAuthPacket reflect_pkt;
+
+  printf("Data received from ");  
+  memcpy(&reflect_pkt, data, datalen);
+  uip_debug_ipaddr_print(sender_addr);
+  printf(" on port %d from port %d \n",
+         receiver_port, sender_port);
+
+  receive_unauth(reflect_pkt);
+  
+ 
+  
+
 }
+
 /*---------------------------------------------------------------------------*/
 static void
 set_global_address(void)
@@ -99,8 +138,21 @@ set_global_address(void)
 }
 /*---------------------------------------------------------------------------*/
 static void
-send_to(){
-
+send_to_unauth(){
+static struct sender_unauthenticated_test pkt;
+      static struct TWAMPtimestamp t;
+      t.second = 222;
+      t.microsecond = 345;
+      pkt.SeqNo = seq_id;
+      pkt.Timestamp = t;
+      pkt.ErrorEstimate = 666;
+      
+      printf("Sending unicast to ");
+      uip_debug_ipaddr_print(addr);
+      printf("\n");
+      
+      seq_id++;
+      simple_udp_sendto(&unicast_connection, &pkt, sizeof(pkt), addr);
 }
 
 /*---------------------------------------------------------------------------*/
@@ -128,20 +180,7 @@ PROCESS_THREAD(unicast_sender_process, ev, data)
     PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&send_timer));
     addr = servreg_hack_lookup(SERVICE_ID);
     if(addr != NULL) {
-      static struct sender_unauthenticated_test pkt;
-      static struct TWAMPtimestamp t;
-      t.second = 222;
-      t.microsecond = 345;
-      pkt.SeqNo = seq_id;
-      pkt.Timestamp = t;
-      pkt.ErrorEstimate = 666;
-      
-      printf("Sending unicast to ");
-      uip_debug_ipaddr_print(addr);
-      printf("\n");
-      
-      seq_id++;
-      simple_udp_sendto(&unicast_connection, &pkt, sizeof(pkt), addr);
+      send_to_unauth();
     } else {
       printf("Service %d not found\n", SERVICE_ID);
     }
