@@ -20,11 +20,11 @@ typedef struct set_up_response{
 } SetupResponse;
 
 typedef struct server_start_msg{	
-	uint8_t MBZ[15];
+	uint8_t MBZ1[15];
 	uint8_t Accept;
 	uint8_t ServerIV[16];
 	TWAMPtimestamp timestamp;
-	uint8_t MBZ[8];
+	uint8_t MBZ2[8];
 } ServerStartMsg;
 
 typedef struct request_session{
@@ -61,10 +61,10 @@ typedef struct hmac{
 
 typedef struct accept_session{
 	uint8_t Accept;
-	uint8_t MBZ;
+	uint8_t MBZ1;
 	uint16_t Port;
 	uint8_t SID[16];
-	uint8_t MBZ[12];
+	uint8_t MBZ2[12];
 	uint8_t HMAC[16];
 } AcceptSession;
 
@@ -84,9 +84,9 @@ typedef struct start_ack{
 typedef struct stop_session{
 	uint8_t Type;
 	uint8_t Accept;
-	uint16_t MBZ;
+	uint16_t MBZ1;
 	uint32_t NumOfSessions;
-	uint8_t MBZ[8];
+	uint8_t MBZ2[8];
 } StopSession;
 
 typedef struct session_descriptor{
