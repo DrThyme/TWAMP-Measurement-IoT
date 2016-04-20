@@ -87,7 +87,7 @@ receiver(struct simple_udp_connection *c,
   reflect_pkt.SeqNo = SeqNo;
   reflect_pkt.ErrorEstimate = 999;
   reflect_pkt.ReceiverTimestamp = ts_rcv;
-  reflect_pkt.SenderSeqNum = sender_pkt.SeqNo;
+  reflect_pkt.SenderSeqNo = sender_pkt.SeqNo;
   reflect_pkt.SenderTimestamp = sender_pkt.Timestamp;
   reflect_pkt.SenderErrorEstimate = sender_pkt.ErrorEstimate;
   reflect_pkt.SenderTTL = 255;

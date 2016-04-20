@@ -121,7 +121,7 @@ typedef struct reflector_unauthenticated_test{
 	uint16_t ErrorEstimate;
 	uint16_t MBZ1;
 	TWAMPtimestamp ReceiverTimestamp;
-	uint32_t SenderSeqNum;
+	uint32_t SenderSeqNo;
 	TWAMPtimestamp SenderTimestamp;
 	uint16_t SenderErrorEstimate;
 	uint16_t MBZ2;
