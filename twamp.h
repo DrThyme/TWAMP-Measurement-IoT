@@ -1,7 +1,7 @@
 typedef struct TWAMPtimestamp{
 	uint32_t second;
 	uint32_t microsecond;
-} TWAMPTimestamp;
+} TWAMPtimestamp;
 
 typedef struct server_greeting{
 	uint8_t Unused[12];
