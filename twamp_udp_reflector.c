@@ -38,7 +38,7 @@
 #include "net/ipv6/uip-ds6.h"
 #include "net/ip/uip-debug.h"
 
-#include "../tools/cooja/git/TWAMP-Measurement-IoT/twamp.h"
+#include "twamp.h"
 
 #include "simple-udp.h"
 #include "servreg-hack.h"

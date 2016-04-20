@@ -46,7 +46,7 @@
 #include <stdio.h>
 #include <string.h>
 
-#include "../tools/cooja/git/TWAMP-Measurement-IoT/twamp.h"
+#include "twamp.h"
 
 #define UDP_PORT 1234
 #define SERVICE_ID 190
