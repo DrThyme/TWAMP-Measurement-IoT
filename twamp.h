@@ -121,7 +121,7 @@ typedef struct reflector_unauthenticated_test{
 	uint16_t ErrorEstimate;
 	uint16_t MBZ1;
 	TWAMPtimestamp ReceiverTimestamp;
-	uint32_t SenderSeqNumb;
+	uint32_t SenderSeqNum;
 	TWAMPtimestamp SenderTimestamp;
 	uint16_t SenderErrorEstimate;
 	uint16_t MBZ2;
@@ -157,4 +157,3 @@ typedef struct reflector_authenticated_test{
 	uint8_t HMAC[16];
 	//uint8_t Padding[] what size should the padding be?
 } ReflectorAuthPacket;
-

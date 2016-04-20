@@ -55,7 +55,7 @@
 #define SEND_TIME		(random_rand() % (SEND_INTERVAL))
 
 static struct simple_udp_connection unicast_connection;
-static SenderUAuthPacket acutalData;
+static uint32_t SeqNo;
 /*---------------------------------------------------------------------------*/
 PROCESS(unicast_receiver_process, "Unicast receiver example process");
 AUTOSTART_PROCESSES(&unicast_receiver_process);
@@ -69,17 +69,41 @@ receiver(struct simple_udp_connection *c,
          struct sender_unauthenticated_test* data,
          uint16_t datalen)
 {
-  printf("Data received from ");  
-  memcpy(&acutalData, data, datalen);
-  uip_debug_ipaddr_print(sender_addr);
-  printf(" on port %d from port %d \n",
-         receiver_port, sender_port);
+  SenderUAuthPacket sender_pkt;
+  ReflectorUAuthPacket reflect_pkt;
 
+  TWAMPtimestamp ts_rcv;
+  TWAMPtimestamp ts_send;
+  //Do proper timestamp here!
+  ts_rcv.second = 1000;
+  ts_rcv.microsecond = 10;
+
+  printf("Data received from ");  
+  memcpy(&sender_pkt, data, datalen);
+  uip_debug_ipaddr_print(sender_addr);
+  printf(" on port %d from port %d \n", receiver_port, sender_port);
+
+  SeqNo++;
+  reflect_pkt.SeqNo = SeqNo;
+  reflect_pkt.ErrorEstimate = 999;
+  reflect_pkt.ReceiverTimestamp = ts_rcv;
+  reflect_pkt.SenderSeqNum = sender_pkt.SeqNo;
+  reflect_pkt.SenderTimestamp = sender_pkt.Timestamp;
+  reflect_pkt.SenderErrorEstimate = sender_pkt.ErrorEstimate;
+  reflect_pkt.SenderTTL = 255;
+  //Do proper timestamp here
+  reflect_pkt.Timestamp.second = 111;
+  reflect_pkt.Timestamp.microsecond = 222;
+
+  simple_udp_sendto(&unicast_connection, &reflect_pkt, 
+	sizeof(reflect_pkt), sender_addr);
+  printf("Packet reflected!\n");
+  printf("#################\n");
   //Prints for debugging
-  printf("SeqNo: %d\n", acutalData.SeqNo);
-  printf("Seconds: %d\n", acutalData.Timestamp.second);
-  printf("Micro: %d\n", acutalData.Timestamp.microsecond);
-  printf("Error: %d\n", acutalData.ErrorEstimate);
+  printf("SeqNo: %d\n", sender_pkt.SeqNo);
+  printf("Seconds: %d\n", sender_pkt.Timestamp.second);
+  printf("Micro: %d\n", sender_pkt.Timestamp.microsecond);
+  printf("Error: %d\n", sender_pkt.ErrorEstimate);
 }
 /*---------------------------------------------------------------------------*/
 static uip_ipaddr_t *
