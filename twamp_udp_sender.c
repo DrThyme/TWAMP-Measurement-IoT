@@ -30,6 +30,7 @@
  *
  */
 
+#include "clock.h"
 #include "contiki.h"
 #include "lib/random.h"
 #include "sys/ctimer.h"
@@ -53,195 +54,234 @@
 
 #define SEND_INTERVAL		(60 * CLOCK_SECOND)
 #define SEND_TIME		(random_rand() % (SEND_INTERVAL))
+
 #define AUTH_MODE 0
+#define TEST_SESSION 1
+#define TEST_AMOUNT 10
 
 static struct simple_udp_connection unicast_connection;
 
 static unsigned int seq_id;
 static uip_ipaddr_t *addr;
 
+static clock_time_t start_time;
+
+static int rcv_num_pkt = 0; 
+static int total_rtt = 0;
+
 /*---------------------------------------------------------------------------*/
-PROCESS(unicast_sender_process, "Unicast sender example process");
-AUTOSTART_PROCESSES(&unicast_sender_process);
+PROCESS(twamp_udp_sender, "TWAMP UDP Sender Process");
+AUTOSTART_PROCESSES(&twamp_udp_sender);
 /*---------------------------------------------------------------------------*/
+static void receive_unauth(struct reflector_unauthenticated_test reflect_pkt){
 
-static void
-receive_unauth(struct reflector_unauthenticated_test reflect_pkt){
+	//Prints for debugging
+	printf("SeqNo: %"PRIu32"\n", reflect_pkt.SeqNo);
+	printf("RS-Seconds: %"PRIu32"\n", reflect_pkt.Timestamp.second);
+	printf("RS-Micro: %"PRIu32"\n", reflect_pkt.Timestamp.microsecond);
+	printf("Error: %"PRIu16"\n", reflect_pkt.ErrorEstimate);
 
- 
-//Prints for debugging
+	printf("R-Seconds: %"PRIu32"\n", reflect_pkt.ReceiverTimestamp.second);
+	printf("R-Micro: %"PRIu32"\n", reflect_pkt.ReceiverTimestamp.microsecond);
+	printf("Sender SeqNo: %"PRIu32"\n", reflect_pkt.SenderSeqNo);
+	printf("S-Seconds: %"PRIu32"\n", reflect_pkt.SenderTimestamp.second);
+	printf("S-Micro: %"PRIu32"\n", reflect_pkt.SenderTimestamp.microsecond);
+	printf("Sender Error: %"PRIu16"\n", reflect_pkt.SenderErrorEstimate);
 
-  printf("SeqNo: %d\n", reflect_pkt.SeqNo);
-  printf("RS-Seconds: %d\n", reflect_pkt.Timestamp.second);
-  printf("RS-Micro: %d\n", reflect_pkt.Timestamp.microsecond);
-  printf("Error: %d\n", reflect_pkt.ErrorEstimate);
-  
-  printf("Sender SeqNo: %d\n", reflect_pkt.SenderSeqNo);
-  printf("R-Seconds: %d\n", reflect_pkt.ReceiverTimestamp.second);
-  printf("R-Micro: %d\n", reflect_pkt.ReceiverTimestamp.microsecond);
-  printf("Sender Error: %d\n", reflect_pkt.SenderErrorEstimate);
-  
-  printf("S-Seconds: %d\n", reflect_pkt.SenderTimestamp.second);
-  printf("S-Micro: %d\n", reflect_pkt.SenderTimestamp.microsecond);
-  printf("Sender TTL: %d\n", reflect_pkt.SenderTTL);
+	printf("Sender TTL: %d\n", reflect_pkt.SenderTTL);
+	if((reflect_pkt.SeqNo - reflect_pkt.SenderSeqNo) == 0){
+		printf("RTT was: %"PRIu32" ticks.", (reflect_pkt.Timestamp.second - reflect_pkt.SenderTimestamp.second));
+	}
+}
+/*---------------------------------------------------------------------------*/
+static void receive_auth(struct reflector_authenticated_test reflect_pkt){
+
+
+	//Prints for debugging
+	printf("SeqNo: %"PRIu32"\n", reflect_pkt.SeqNo);
+	printf("RS-Seconds: %"PRIu32"\n", reflect_pkt.Timestamp.second);
+	printf("RS-Micro: %"PRIu32"\n", reflect_pkt.Timestamp.microsecond);
+	printf("Error: %"PRIu16"\n", reflect_pkt.ErrorEstimate);
+
+	printf("R-Seconds: %"PRIu32"\n", reflect_pkt.ReceiverTimestamp.second);
+	printf("R-Micro: %"PRIu32"\n", reflect_pkt.ReceiverTimestamp.microsecond);
+
+	printf("Sender SeqNo: %"PRIu32"\n", reflect_pkt.SenderSeqNo);
+	printf("S-Seconds: %"PRIu32"\n", reflect_pkt.SenderTimestamp.second);
+	printf("S-Micro: %"PRIu32"\n", reflect_pkt.SenderTimestamp.microsecond);
+	printf("Sender Error: %"PRIu16"\n", reflect_pkt.SenderErrorEstimate);
+
+	printf("Sender TTL: %d\n", reflect_pkt.SenderTTL);
+	if((reflect_pkt.SeqNo - reflect_pkt.SenderSeqNo) == 0){
+		printf("RTT was: %"PRIu32" ticks.", (reflect_pkt.Timestamp.second - reflect_pkt.SenderTimestamp.second));
+	}
 }
 
 
 /*---------------------------------------------------------------------------*/
-
-static void
-receive_auth(struct reflector_authenticated_test reflect_pkt){
-
- 
-//Prints for debugging
-
-  printf("SeqNo: %d\n", reflect_pkt.SeqNo);
-  printf("RS-Seconds: %d\n", reflect_pkt.Timestamp.second);
-  printf("RS-Micro: %d\n", reflect_pkt.Timestamp.microsecond);
-  printf("Error: %d\n", reflect_pkt.ErrorEstimate);
-  
-  printf("Sender SeqNo: %d\n", reflect_pkt.SenderSeqNo);
-  printf("R-Seconds: %d\n", reflect_pkt.ReceiverTimestamp.second);
-  printf("R-Micro: %d\n", reflect_pkt.ReceiverTimestamp.microsecond);
-  printf("Sender Error: %d\n", reflect_pkt.SenderErrorEstimate);
-  
-  printf("S-Seconds: %d\n", reflect_pkt.SenderTimestamp.second);
-  printf("S-Micro: %d\n", reflect_pkt.SenderTimestamp.microsecond);
-  printf("Sender TTL: %d\n", reflect_pkt.SenderTTL);
-}
-
-
-/*---------------------------------------------------------------------------*/
-
-static void
-receiver(struct simple_udp_connection *c,
-         const uip_ipaddr_t *sender_addr,
-         uint16_t sender_port,
-         const uip_ipaddr_t *receiver_addr,
-         uint16_t receiver_port,
-         const uint8_t *data,
-         uint16_t datalen)
+static void receiver(struct simple_udp_connection *c,
+		const uip_ipaddr_t *sender_addr,
+		uint16_t sender_port,
+		const uip_ipaddr_t *receiver_addr,
+		uint16_t receiver_port,
+		const uint8_t *data,
+		uint16_t datalen)
 {
-  printf("Data received from "); 
-  uip_debug_ipaddr_print(sender_addr);
-  printf(" on port %d from port %d \n",
-         receiver_port, sender_port);
-  printf("###############\n");
-
-  if(AUTH_MODE == 0){
-    ReflectorUAuthPacket reflect_pkt;  
-    memcpy(&reflect_pkt, data, datalen);
-    receive_unauth(reflect_pkt);
-  }
-  else if(AUTH_MODE == 1){
-    ReflectorAuthPacket reflect_pkt;  
-    memcpy(&reflect_pkt, data, datalen);
-    receive_auth(reflect_pkt);
-  }
-  
- 
-  
-
+	printf("Data received from "); 
+	uip_debug_ipaddr_print(sender_addr);
+	printf(" on port %d from port %d \n",
+			receiver_port, sender_port);
+	printf("###############\n");
+	if(AUTH_MODE == 0){
+		ReflectorUAuthPacket reflect_pkt;  
+		memset(&reflect_pkt,0,sizeof(reflect_pkt));
+		memcpy(&reflect_pkt, data, datalen);
+		if(TEST_SESSION == 0) receive_unauth(reflect_pkt);
+		if(TEST_SESSION == 1){
+			total_rtt += (reflect_pkt.Timestamp.second - reflect_pkt.SenderTimestamp.second);
+			rcv_num_pkt++;
+		} 
+	}
+	else if(AUTH_MODE == 1){
+		ReflectorAuthPacket reflect_pkt;  
+		memset(&reflect_pkt,0,sizeof(reflect_pkt));
+		memcpy(&reflect_pkt, data, datalen);
+		receive_auth(reflect_pkt);
+	}
 }
-
 /*---------------------------------------------------------------------------*/
-static void
-set_global_address(void)
+static void set_global_address(void)
 {
-  uip_ipaddr_t ipaddr;
-  int i;
-  uint8_t state;
+	uip_ipaddr_t ipaddr;
+	int i;
+	uint8_t state;
 
-  uip_ip6addr(&ipaddr, 0xaaaa, 0, 0, 0, 0, 0, 0, 0);
-  uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
-  uip_ds6_addr_add(&ipaddr, 0, ADDR_AUTOCONF);
+	uip_ip6addr(&ipaddr, 0xaaaa, 0, 0, 0, 0, 0, 0, 0);
+	uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
+	uip_ds6_addr_add(&ipaddr, 0, ADDR_AUTOCONF);
 
-  printf("IPv6 addresses: ");
-  for(i = 0; i < UIP_DS6_ADDR_NB; i++) {
-    state = uip_ds6_if.addr_list[i].state;
-    if(uip_ds6_if.addr_list[i].isused &&
-       (state == ADDR_TENTATIVE || state == ADDR_PREFERRED)) {
-      uip_debug_ipaddr_print(&uip_ds6_if.addr_list[i].ipaddr);
-      printf("\n");
-    }
-  }
+	printf("IPv6 addresses: ");
+	for(i = 0; i < UIP_DS6_ADDR_NB; i++) {
+		state = uip_ds6_if.addr_list[i].state;
+		if(uip_ds6_if.addr_list[i].isused &&
+				(state == ADDR_TENTATIVE || state == ADDR_PREFERRED)) {
+			uip_debug_ipaddr_print(&uip_ds6_if.addr_list[i].ipaddr);
+			printf("\n");
+		}
+	}
 }
 /*---------------------------------------------------------------------------*/
 static void
 send_to_unauth(){
-static struct sender_unauthenticated_test pkt;
-      static struct TWAMPtimestamp t;
-      t.second = 222;
-      t.microsecond = 345;
-      pkt.SeqNo = seq_id;
-      pkt.Timestamp = t;
-      pkt.ErrorEstimate = 666;
-      
-      printf("Sending unicast to ");
-      uip_debug_ipaddr_print(addr);
-      printf("\n");
-      
-      seq_id++;
-      simple_udp_sendto(&unicast_connection, &pkt, sizeof(pkt), addr);
+	static struct sender_unauthenticated_test pkt;
+	static struct TWAMPtimestamp t;
+	pkt.SeqNo = seq_id;
+	pkt.ErrorEstimate = 666;
+
+	printf("Sending unicast to ");
+	uip_debug_ipaddr_print(addr);
+	printf("\n");
+
+	seq_id++;
+	t.second = clock_time() - start_time;
+	t.microsecond = 0;
+	pkt.Timestamp = t;
+	simple_udp_sendto(&unicast_connection, &pkt, sizeof(pkt), addr);
 }
 
 /*---------------------------------------------------------------------------*/
 static void
 send_to_auth(){
-static struct sender_authenticated_test pkt;
-      static struct TWAMPtimestamp t;
-      t.second = 222;
-      t.microsecond = 345;
-      pkt.SeqNo = seq_id;
-      pkt.Timestamp = t;
-      pkt.ErrorEstimate = 666;
-      
-      printf("Sending unicast to ");
-      uip_debug_ipaddr_print(addr);
-      printf("\n");
-      
-      seq_id++;
-      simple_udp_sendto(&unicast_connection, &pkt, sizeof(pkt), addr);
+	static struct sender_authenticated_test pkt;
+	static struct TWAMPtimestamp t;
+	pkt.SeqNo = seq_id;
+	pkt.ErrorEstimate = 666;
+
+	printf("Sending unicast to ");
+	uip_debug_ipaddr_print(addr);
+	printf("\n");
+
+	seq_id++;
+	t.second = clock_time() - start_time;
+	t.microsecond = 0;
+	pkt.Timestamp = t;
+	simple_udp_sendto(&unicast_connection, &pkt, sizeof(pkt), addr);
 }
-
 /*---------------------------------------------------------------------------*/
-PROCESS_THREAD(unicast_sender_process, ev, data)
-{
-  static struct etimer periodic_timer;
-  static struct etimer send_timer;
-  
-  PROCESS_BEGIN();
+static void print_statistics(){
+	int pkt_success = TEST_AMOUNT - rcv_num_pkt - 1;
+	int avg_rtt = total_rtt/rcv_num_pkt;
+	printf("------------------------------------\n");
+	printf("We lost %d packets.\n", pkt_success);
+	printf("Average RTT was: %d\n", avg_rtt);
+	printf("------------------------------------\n");
+}
+/*---------------------------------------------------------------------------*/
+PROCESS_THREAD(twamp_udp_sender, ev, data){
+	static struct etimer periodic_timer;
+	static struct etimer send_timer;
 
-  servreg_hack_init();
+	PROCESS_BEGIN();
 
-  set_global_address();
+	servreg_hack_init();
 
-  simple_udp_register(&unicast_connection, UDP_PORT,
-                      NULL, UDP_PORT, receiver);
+	set_global_address();
 
-  etimer_set(&periodic_timer, SEND_INTERVAL);
-  while(1) {
+	start_time = clock_time();
 
-    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
-    etimer_reset(&periodic_timer);
-    etimer_set(&send_timer, SEND_TIME);
+	simple_udp_register(&unicast_connection, UDP_PORT,
+			NULL, UDP_PORT, receiver);
 
-    PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&send_timer));
-    addr = servreg_hack_lookup(SERVICE_ID);
-    if(addr != NULL) {
-      if(AUTH_MODE == 0){
-	 send_to_unauth();
-      }
-      else if(AUTH_MODE == 1){
-	send_to_auth();
-      }
+	etimer_set(&periodic_timer, SEND_INTERVAL);
+	if(TEST_SESSION == 0){
+		while(1) {
+			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
+			etimer_reset(&periodic_timer);
+			etimer_set(&send_timer, SEND_TIME);
 
-    
-    } else {
-      printf("Service %d not found\n", SERVICE_ID);
-    }
-  }
+			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&send_timer));
+			addr = servreg_hack_lookup(SERVICE_ID);
+			if(addr != NULL) {
+				if(AUTH_MODE == 0){
+					send_to_unauth();
+				}
+				else if(AUTH_MODE == 1){
+					send_to_auth();
+				}
 
-  PROCESS_END();
+
+			} else {
+				printf("Service %d not found\n", SERVICE_ID);
+			}
+		}
+	}else if(TEST_SESSION == 1){
+		static int i = 0;
+		while(i < TEST_AMOUNT) {
+			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
+			etimer_reset(&periodic_timer);
+			etimer_set(&send_timer, SEND_TIME);
+
+			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&send_timer));
+			addr = servreg_hack_lookup(SERVICE_ID);
+			if(addr != NULL) {
+				if(AUTH_MODE == 0){
+					send_to_unauth();
+					i++;
+				}
+				else if(AUTH_MODE == 1){
+					send_to_auth();
+					i++;
+				}
+
+
+			} else {
+				printf("Service %d not found\n", SERVICE_ID);
+			}
+		}
+		print_statistics();
+		printf("Test session finished!\n");
+	}
+
+	PROCESS_END();
 }
 /*---------------------------------------------------------------------------*/
