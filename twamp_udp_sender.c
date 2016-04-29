@@ -31,6 +31,7 @@
  */
 
 #include "clock.h"
+#include "sys/rtimer.h"
 #include "contiki.h"
 #include "lib/random.h"
 #include "sys/ctimer.h"
@@ -38,6 +39,8 @@
 #include "net/ip/uip.h"
 #include "net/ipv6/uip-ds6.h"
 #include "net/ip/uip-debug.h"
+
+#include "powertrace.h"
 
 #include "sys/node-id.h"
 
@@ -52,7 +55,7 @@
 #define UDP_PORT 1234
 #define SERVICE_ID 190
 
-#define SEND_INTERVAL		(60 * CLOCK_SECOND)
+#define SEND_INTERVAL		(4 * CLOCK_SECOND)
 #define SEND_TIME		(random_rand() % (SEND_INTERVAL))
 
 #define AUTH_MODE 0
@@ -127,11 +130,12 @@ static void receiver(struct simple_udp_connection *c,
 		const uint8_t *data,
 		uint16_t datalen)
 {
+/*	
 	printf("Data received from "); 
 	uip_debug_ipaddr_print(sender_addr);
 	printf(" on port %d from port %d \n",
 			receiver_port, sender_port);
-	printf("###############\n");
+*/
 	if(AUTH_MODE == 0){
 		ReflectorUAuthPacket reflect_pkt;  
 		memset(&reflect_pkt,0,sizeof(reflect_pkt));
@@ -159,7 +163,7 @@ static void set_global_address(void)
 	uip_ip6addr(&ipaddr, 0xaaaa, 0, 0, 0, 0, 0, 0, 0);
 	uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
 	uip_ds6_addr_add(&ipaddr, 0, ADDR_AUTOCONF);
-
+	
 	printf("IPv6 addresses: ");
 	for(i = 0; i < UIP_DS6_ADDR_NB; i++) {
 		state = uip_ds6_if.addr_list[i].state;
@@ -177,10 +181,9 @@ send_to_unauth(){
 	static struct TWAMPtimestamp t;
 	pkt.SeqNo = seq_id;
 	pkt.ErrorEstimate = 666;
-
-	printf("Sending unicast to ");
+	/*printf("Sending unicast to ");
 	uip_debug_ipaddr_print(addr);
-	printf("\n");
+	printf("\n");*/
 
 	seq_id++;
 	t.second = clock_time() - start_time;
@@ -223,6 +226,7 @@ PROCESS_THREAD(twamp_udp_sender, ev, data){
 
 	PROCESS_BEGIN();
 
+
 	servreg_hack_init();
 
 	set_global_address();
@@ -256,30 +260,45 @@ PROCESS_THREAD(twamp_udp_sender, ev, data){
 		}
 	}else if(TEST_SESSION == 1){
 		static int i = 0;
-		while(i < TEST_AMOUNT) {
+		static int flag = 1;
+		static powertrace_on = 0;
+		etimer_set(&periodic_timer, SEND_INTERVAL);
+		while(flag){
 			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
+			etimer_reset(&periodic_timer);
+			addr = servreg_hack_lookup(SERVICE_ID);
+			if(addr != NULL){
+				flag = 0;
+			} else{
+				printf("Service %d not found, retrying!\n", SERVICE_ID);
+			}
+		}
+		etimer_set(&periodic_timer, SEND_INTERVAL);
+		while(i < TEST_AMOUNT) {
+			if(powertrace_on == 0){
+				powertrace_start(CLOCK_SECOND * 1);
+				powertrace_on = 1;
+			}
+			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
+
 			etimer_reset(&periodic_timer);
 			etimer_set(&send_timer, SEND_TIME);
 
 			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&send_timer));
-			addr = servreg_hack_lookup(SERVICE_ID);
-			if(addr != NULL) {
-				if(AUTH_MODE == 0){
-					send_to_unauth();
-					i++;
-				}
-				else if(AUTH_MODE == 1){
-					send_to_auth();
-					i++;
-				}
-
-
-			} else {
-				printf("Service %d not found\n", SERVICE_ID);
+			if(AUTH_MODE == 0){
+				send_to_unauth();
+				i++;
 			}
+			else if(AUTH_MODE == 1){
+				send_to_auth();
+				i++;
+			}
+
+
 		}
-		print_statistics();
-		printf("Test session finished!\n");
+		//print_statistics();
+		powertrace_stop();
+		//printf("Test session finished!\n");
 	}
 
 	PROCESS_END();
