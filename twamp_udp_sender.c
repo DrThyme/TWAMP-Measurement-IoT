@@ -59,7 +59,7 @@
 #define SEND_TIME		(random_rand() % (SEND_INTERVAL))
 
 #define AUTH_MODE 0
-#define TEST_SESSION 1
+#define TEST_SESSION 0
 #define TEST_AMOUNT 10
 
 static struct simple_udp_connection unicast_connection;
@@ -92,8 +92,9 @@ static void receive_unauth(struct reflector_unauthenticated_test reflect_pkt){
 	printf("Sender Error: %"PRIu16"\n", reflect_pkt.SenderErrorEstimate);
 
 	printf("Sender TTL: %d\n", reflect_pkt.SenderTTL);
+	//TODO: Make the calculation take into consideration microseconds in relation to seconds. I.e. 6.4 - 5.5 = 0.9 and not 1.-1 
 	if((reflect_pkt.SeqNo - reflect_pkt.SenderSeqNo) == 0){
-		printf("RTT was: %"PRIu32" ticks.", (reflect_pkt.Timestamp.second - reflect_pkt.SenderTimestamp.second));
+		printf("RTT was: %"PRIu32".%"PRIu32" seconds.", (reflect_pkt.Timestamp.second - reflect_pkt.SenderTimestamp.second), (reflect_pkt.Timestamp.microsecond - reflect_pkt.SenderTimestamp.microsecond));
 	}
 }
 /*---------------------------------------------------------------------------*/
@@ -115,8 +116,9 @@ static void receive_auth(struct reflector_authenticated_test reflect_pkt){
 	printf("Sender Error: %"PRIu16"\n", reflect_pkt.SenderErrorEstimate);
 
 	printf("Sender TTL: %d\n", reflect_pkt.SenderTTL);
+	//TODO: Make the calculation take into consideration microseconds in relation to seconds. I.e. 6.4 - 5.5 = 0.9 and not 1.-1 
 	if((reflect_pkt.SeqNo - reflect_pkt.SenderSeqNo) == 0){
-		printf("RTT was: %"PRIu32" ticks.", (reflect_pkt.Timestamp.second - reflect_pkt.SenderTimestamp.second));
+		printf("RTT was: %"PRIu32".%"PRIu32" seconds.", (reflect_pkt.Timestamp.second - reflect_pkt.SenderTimestamp.second), (reflect_pkt.Timestamp.microsecond - reflect_pkt.SenderTimestamp.microsecond));
 	}
 }
 
@@ -179,15 +181,26 @@ static void
 send_to_unauth(){
 	static struct sender_unauthenticated_test pkt;
 	static struct TWAMPtimestamp t;
+	int second;
+	double temp;
+	int clock;
 	pkt.SeqNo = seq_id;
 	pkt.ErrorEstimate = 666;
-	/*printf("Sending unicast to ");
+	printf("Sending unicast to ");
 	uip_debug_ipaddr_print(addr);
-	printf("\n");*/
+	printf("\n");
 
 	seq_id++;
-	t.second = clock_time() - start_time;
-	t.microsecond = 0;
+	clock = clock_time();
+	second = (clock - start_time)/CLOCK_SECOND;
+	temp = (double) (clock - start_time)/CLOCK_SECOND - second;
+	t.second = second;
+	t.microsecond = temp * 1000;
+        printf("Second: %d\n", t.second);
+        printf("Fraction: %d\n", t.microsecond);
+	
+	//t.second = clock_time() - start_time;
+	//t.microsecond = 0;
 	pkt.Timestamp = t;
 	simple_udp_sendto(&unicast_connection, &pkt, sizeof(pkt), addr);
 }
@@ -197,6 +210,9 @@ static void
 send_to_auth(){
 	static struct sender_authenticated_test pkt;
 	static struct TWAMPtimestamp t;
+	int second;
+	int clock;
+	double temp;
 	pkt.SeqNo = seq_id;
 	pkt.ErrorEstimate = 666;
 
@@ -205,8 +221,11 @@ send_to_auth(){
 	printf("\n");
 
 	seq_id++;
-	t.second = clock_time() - start_time;
-	t.microsecond = 0;
+	clock = clock_time();
+	second = (clock - start_time)/CLOCK_SECOND;
+	temp = (double) (clock - start_time)/CLOCK_SECOND - second;
+	t.second = second;
+	t.microsecond = temp * 1000;
 	pkt.Timestamp = t;
 	simple_udp_sendto(&unicast_connection, &pkt, sizeof(pkt), addr);
 }
@@ -223,6 +242,9 @@ static void print_statistics(){
 PROCESS_THREAD(twamp_udp_sender, ev, data){
 	static struct etimer periodic_timer;
 	static struct etimer send_timer;
+	static double test;
+	static int test2;
+	
 
 	PROCESS_BEGIN();
 
