@@ -61,8 +61,10 @@
 #define SEND_TIME		(random_rand() % (SEND_INTERVAL))
 
 #define AUTH_MODE 0
-#define TEST_SESSION 0
-#define TEST_AMOUNT 20
+#define TEST_SESSION 1
+#define TEST_AMOUNT 40
+
+#define POWERTRACE 1
 
 static struct simple_udp_connection unicast_connection;
 static struct simple_udp_connection unicast_synch_connection;
@@ -166,7 +168,7 @@ static void receiver(struct simple_udp_connection *c,
   */
   if(AUTH_MODE == 0){
     ReflectorUAuthPacket reflect_pkt;  
-    printf("Sizeof reflect pkt: %d",sizeof(reflect_pkt));
+    //    printf("Sizeof reflect pkt: %d",sizeof(reflect_pkt));
     memset(&reflect_pkt,0,sizeof(reflect_pkt));
     memcpy(&reflect_pkt, data, datalen);
     if(TEST_SESSION == 0) receive_unauth(reflect_pkt);
@@ -218,7 +220,7 @@ send_to_unauth(){
     uip_debug_ipaddr_print(addr);
     printf("\n");*/
 
-  printf("Size of send pkt: %d",sizeof(pkt));
+  //printf("Size of send pkt: %d \n",sizeof(pkt));
 
   seq_id++;
   clock = clock_time();
@@ -231,6 +233,10 @@ send_to_unauth(){
 	
   //t.second = clock_time() - start_time;
   //t.microsecond = 0;
+  //  printf("msg send at clock time: %d \n",clock);
+  printf("%d \n",clock);
+  
+
   pkt.Timestamp = t;
   simple_udp_sendto(&unicast_connection, &pkt, sizeof(pkt), addr);
 }
@@ -418,8 +424,10 @@ PROCESS_THREAD(twamp_udp_sender, ev, data){
     etimer_set(&periodic_timer, SEND_INTERVAL);
     while(i < TEST_AMOUNT) {
       if(powertrace_on == 0){
-	powertrace_start(CLOCK_SECOND * 1);
-	powertrace_on = 1;
+        if(POWERTRACE == 1){
+	  powertrace_start(CLOCK_SECOND * 1);
+	  powertrace_on = 1;
+	}
       }
       PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
 
@@ -439,7 +447,9 @@ PROCESS_THREAD(twamp_udp_sender, ev, data){
 
     }
     //print_statistics();
-    powertrace_stop();
+    if(POWERTRACE == 1){
+      powertrace_stop();
+    }
     //printf("Test session finished!\n");
   }
 

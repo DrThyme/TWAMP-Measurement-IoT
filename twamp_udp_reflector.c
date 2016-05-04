@@ -82,7 +82,7 @@ reflect_uauth(struct sender_unauthenticated_test sender_pkt,
   double temp;
   //TODO: Set all MBZs to zero!
   ReflectorUAuthPacket reflect_pkt;
-  printf("Paket size = %d\n", sizeof(reflect_pkt));
+  //printf("Paket size = %d\n", sizeof(reflect_pkt));
   reflect_pkt.SeqNo = seqno;
   reflect_pkt.ErrorEstimate = 999;
   reflect_pkt.ReceiverTimestamp = ts_rcv;
@@ -101,7 +101,7 @@ reflect_uauth(struct sender_unauthenticated_test sender_pkt,
   simple_udp_sendto(&unicast_connection, &reflect_pkt, 
 		    sizeof(reflect_pkt), sender_addr);
 
-  printf("Packet reflected to:\n");
+  /*  printf("Packet reflected to:\n");
   uip_debug_ipaddr_print(sender_addr);
   printf("\n#################\n");
   //Prints for debugging
@@ -109,7 +109,7 @@ reflect_uauth(struct sender_unauthenticated_test sender_pkt,
   printf("Seconds: %"PRIu32"\n", sender_pkt.Timestamp.second);
   printf("Micro: %"PRIu32"\n", sender_pkt.Timestamp.microsecond);
   printf("Error: %"PRIu16"\n", sender_pkt.ErrorEstimate);
-  seqno++;
+  */ seqno++;
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -167,8 +167,10 @@ receiver(struct simple_udp_connection *c,
   int second;
   double temp;
 
-  printf("recieved msg at clock time: %d ",clock_time()-  offset - prop_delay);
-  
+  //printf("recieved msg at clock time: %d \n",clock_time()-  offset - prop_delay);
+  printf( "%d \n",clock_time()-  offset - prop_delay);
+    
+
   TWAMPtimestamp ts_rcv;
   clock = clock_time() - offset;
   second = (clock - start_time)/CLOCK_SECOND;
@@ -176,9 +178,9 @@ receiver(struct simple_udp_connection *c,
   ts_rcv.second = second;
   ts_rcv.microsecond = temp * 1000;
 
-  printf("Data received from ");  
-  uip_debug_ipaddr_print(sender_addr);
-  printf(" on port %d from port %d \n", receiver_port, sender_port);
+  //  printf("Data received from ");  
+  // uip_debug_ipaddr_print(sender_addr);
+  // printf(" on port %d from port %d \n", receiver_port, sender_port);
   
   if(AUTH_MODE == 0){
     SenderUAuthPacket sender_pkt;
@@ -247,7 +249,7 @@ adjust_offset(rtimer_clock_t startup_time, rtimer_clock_t processing_time,
   prop_delay = (local_time - startup_time - processing_time)/2;
    
   offset = local_time - absolute_time - prop_delay;  
-
+  /*
   printf("##########################################\n");
   printf("Startup_time: %d \n", startup_time);
   printf("processing_time: %d\n",processing_time);
@@ -257,6 +259,7 @@ adjust_offset(rtimer_clock_t startup_time, rtimer_clock_t processing_time,
   printf("Propagation_delay: %d \n", prop_delay);
   printf("##########################################\n");
   printf("offset: %d \n", offset);
+  */
 }
 
 
