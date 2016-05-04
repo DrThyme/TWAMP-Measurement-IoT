@@ -95,8 +95,8 @@ reflect_uauth(struct sender_unauthenticated_test sender_pkt,
   clock = clock_time()- offset;
   second = (clock - start_time)/CLOCK_SECOND;
   temp = (double) (clock - start_time)/CLOCK_SECOND - second;
-  reflect_pkt.Timestamp.second = second;
-  reflect_pkt.Timestamp.microsecond = temp * 1000;
+  reflect_pkt.Timestamp.Second = second;
+  reflect_pkt.Timestamp.Fraction = temp * 1000;
 
   simple_udp_sendto(&unicast_connection, &reflect_pkt, 
 		    sizeof(reflect_pkt), sender_addr);
@@ -106,8 +106,8 @@ reflect_uauth(struct sender_unauthenticated_test sender_pkt,
   printf("\n#################\n");
   //Prints for debugging
   printf("SeqNo: %"PRIu32"\n", sender_pkt.SeqNo);
-  printf("Seconds: %"PRIu32"\n", sender_pkt.Timestamp.second);
-  printf("Micro: %"PRIu32"\n", sender_pkt.Timestamp.microsecond);
+  printf("Seconds: %"PRIu32"\n", sender_pkt.Timestamp.Second);
+  printf("Micro: %"PRIu32"\n", sender_pkt.Timestamp.Fraction);
   printf("Error: %"PRIu16"\n", sender_pkt.ErrorEstimate);
   */ seqno++;
 }
@@ -136,8 +136,8 @@ reflect_auth(struct sender_authenticated_test sender_pkt,
   clock = clock_time()- offset;
   second = (clock - start_time)/CLOCK_SECOND;
   temp = (double) (clock - start_time)/CLOCK_SECOND - second;
-  reflect_pkt.Timestamp.second = second;
-  reflect_pkt.Timestamp.microsecond = temp * 1000;
+  reflect_pkt.Timestamp.Second = second;
+  reflect_pkt.Timestamp.Fraction = temp * 1000;
 
 
   simple_udp_sendto(&unicast_connection, &reflect_pkt, 
@@ -148,8 +148,8 @@ reflect_auth(struct sender_authenticated_test sender_pkt,
   printf("#################\n");
   //Prints for debugging
   printf("SeqNo: %"PRIu32"\n", sender_pkt.SeqNo);
-  printf("Seconds: %"PRIu32"\n", sender_pkt.Timestamp.second);
-  printf("Micro: %"PRIu32"\n", sender_pkt.Timestamp.microsecond);
+  printf("Seconds: %"PRIu32"\n", sender_pkt.Timestamp.Second);
+  printf("Micro: %"PRIu32"\n", sender_pkt.Timestamp.Fraction);
   printf("Error: %"PRIu16"\n", sender_pkt.ErrorEstimate);
   seqno++;
 }
@@ -175,8 +175,8 @@ receiver(struct simple_udp_connection *c,
   clock = clock_time() - offset;
   second = (clock - start_time)/CLOCK_SECOND;
   temp = (double) (clock - start_time)/CLOCK_SECOND - second;
-  ts_rcv.second = second;
-  ts_rcv.microsecond = temp * 1000;
+  ts_rcv.Second = second;
+  ts_rcv.Fraction = temp * 1000;
 
   //  printf("Data received from ");  
   // uip_debug_ipaddr_print(sender_addr);
@@ -285,18 +285,18 @@ static timesynch(struct simple_udp_connection *c,
   memset(&time_pkt, 0, sizeof(time_pkt));
   memcpy(&time_pkt, data, datalen);
 
-  if(time_pkt.dummy == 0){
-    time_pkt.timestamp = clock_time();
+  if(time_pkt.Dummy == 0){
+    time_pkt.Timestamp = clock_time();
     printf("time at timestamp: %d \n",clock_time());
     simple_udp_sendto(&unicast_synch_connection, &time_pkt, 
 		      sizeof(time_pkt), sender_addr);
     printf("Time synch handshake initiated \n");
   }
   else{
-    //  if(time_pkt.authority_level < authority_level) {
-      adjust_offset(time_pkt.timestamp, time_pkt.prop_time, 
-		    clock_time(), time_pkt.clock_time);
-      timesynch_set_authority_level(time_pkt.authority_level + 1);
+    //  if(time_pkt.AuthorityLevel < authority_level) {
+      adjust_offset(time_pkt.Timestamp, time_pkt.PropTime, 
+		    clock_time(), time_pkt.ClockTime);
+      timesynch_set_authority_level(time_pkt.AuthorityLevel + 1);
       //}
     
     simple_udp_sendto(&unicast_synch_connection, &time_pkt, 

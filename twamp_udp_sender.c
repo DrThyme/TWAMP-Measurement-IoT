@@ -92,28 +92,28 @@ static void receive_unauth(struct reflector_unauthenticated_test reflect_pkt){
 
   //Prints for debugging
   printf("SeqNo: %"PRIu32"\n", reflect_pkt.SeqNo);
-  printf("RS-Seconds: %"PRIu32"\n", reflect_pkt.Timestamp.second);
-  printf("RS-Micro: %"PRIu32"\n", reflect_pkt.Timestamp.microsecond);
+  printf("RS-Seconds: %"PRIu32"\n", reflect_pkt.Timestamp.Second);
+  printf("RS-Micro: %"PRIu32"\n", reflect_pkt.Timestamp.Fraction);
   printf("Error: %"PRIu16"\n", reflect_pkt.ErrorEstimate);
 
-  printf("R-Seconds: %"PRIu32"\n", reflect_pkt.ReceiverTimestamp.second);
-  printf("R-Micro: %"PRIu32"\n", reflect_pkt.ReceiverTimestamp.microsecond);
+  printf("R-Seconds: %"PRIu32"\n", reflect_pkt.ReceiverTimestamp.Second);
+  printf("R-Micro: %"PRIu32"\n", reflect_pkt.ReceiverTimestamp.Fraction);
   printf("Sender SeqNo: %"PRIu32"\n", reflect_pkt.SenderSeqNo);
-  printf("S-Seconds: %"PRIu32"\n", reflect_pkt.SenderTimestamp.second);
-  printf("S-Micro: %"PRIu32"\n", reflect_pkt.SenderTimestamp.microsecond);
+  printf("S-Seconds: %"PRIu32"\n", reflect_pkt.SenderTimestamp.Second);
+  printf("S-Micro: %"PRIu32"\n", reflect_pkt.SenderTimestamp.Fraction);
   printf("Sender Error: %"PRIu16"\n", reflect_pkt.SenderErrorEstimate);
 
   printf("Sender TTL: %d\n", reflect_pkt.SenderTTL);
   //TODO: Make the calculation take into consideration microseconds in relation to seconds. I.e. 6.4 - 5.5 = 0.9 and not 1.-1 
   if((reflect_pkt.SeqNo - reflect_pkt.SenderSeqNo) == 0){
-    uint32_t second_temp = reflect_pkt.Timestamp.second - reflect_pkt.SenderTimestamp.second;
-    uint32_t micro_temp = reflect_pkt.Timestamp.microsecond - reflect_pkt.SenderTimestamp.microsecond;
+    uint32_t second_temp = reflect_pkt.Timestamp.Second - reflect_pkt.SenderTimestamp.Second;
+    uint32_t micro_temp = reflect_pkt.Timestamp.Fraction - reflect_pkt.SenderTimestamp.Fraction;
     if(micro_temp < 0){
       second_temp = second_temp - 1;
       micro_temp = 1 + micro_temp;
     }
     printf("RTT was: %"PRIu32".%"PRIu32" seconds.", second_temp, micro_temp);
-    //printf("RTT was: %"PRIu32".%"PRIu32" seconds.", (reflect_pkt.Timestamp.second - reflect_pkt.SenderTimestamp.second), (reflect_pkt.Timestamp.microsecond - reflect_pkt.SenderTimestamp.microsecond));
+    //printf("RTT was: %"PRIu32".%"PRIu32" seconds.", (reflect_pkt.Timestamp.Second - reflect_pkt.SenderTimestamp.Second), (reflect_pkt.Timestamp.Fraction - reflect_pkt.SenderTimestamp.Fraction));
   }
 }
 /*---------------------------------------------------------------------------*/
@@ -122,29 +122,29 @@ static void receive_auth(struct reflector_authenticated_test reflect_pkt){
 
   //Prints for debugging
   printf("SeqNo: %"PRIu32"\n", reflect_pkt.SeqNo);
-  printf("RS-Seconds: %"PRIu32"\n", reflect_pkt.Timestamp.second);
-  printf("RS-Micro: %"PRIu32"\n", reflect_pkt.Timestamp.microsecond);
+  printf("RS-Seconds: %"PRIu32"\n", reflect_pkt.Timestamp.Second);
+  printf("RS-Micro: %"PRIu32"\n", reflect_pkt.Timestamp.Fraction);
   printf("Error: %"PRIu16"\n", reflect_pkt.ErrorEstimate);
 
-  printf("R-Seconds: %"PRIu32"\n", reflect_pkt.ReceiverTimestamp.second);
-  printf("R-Micro: %"PRIu32"\n", reflect_pkt.ReceiverTimestamp.microsecond);
+  printf("R-Seconds: %"PRIu32"\n", reflect_pkt.ReceiverTimestamp.Second);
+  printf("R-Micro: %"PRIu32"\n", reflect_pkt.ReceiverTimestamp.Fraction);
 
   printf("Sender SeqNo: %"PRIu32"\n", reflect_pkt.SenderSeqNo);
-  printf("S-Seconds: %"PRIu32"\n", reflect_pkt.SenderTimestamp.second);
-  printf("S-Micro: %"PRIu32"\n", reflect_pkt.SenderTimestamp.microsecond);
+  printf("S-Seconds: %"PRIu32"\n", reflect_pkt.SenderTimestamp.Second);
+  printf("S-Micro: %"PRIu32"\n", reflect_pkt.SenderTimestamp.Fraction);
   printf("Sender Error: %"PRIu16"\n", reflect_pkt.SenderErrorEstimate);
 
   printf("Sender TTL: %d\n", reflect_pkt.SenderTTL);
   //TODO: Make the calculation take into consideration microseconds in relation to seconds. I.e. 6.4 - 5.5 = 0.9 and not 1.-1 
   if((reflect_pkt.SeqNo - reflect_pkt.SenderSeqNo) == 0){
-    uint32_t second_temp = reflect_pkt.Timestamp.second - reflect_pkt.SenderTimestamp.second;
-    uint32_t micro_temp = reflect_pkt.Timestamp.microsecond - reflect_pkt.SenderTimestamp.microsecond;
+    uint32_t second_temp = reflect_pkt.Timestamp.Second - reflect_pkt.SenderTimestamp.Second;
+    uint32_t micro_temp = reflect_pkt.Timestamp.Fraction - reflect_pkt.SenderTimestamp.Fraction;
     if(micro_temp < 0){
       second_temp = second_temp - 1;
       micro_temp = 1 + micro_temp;
     }
     printf("RTT was: %"PRIu32".%"PRIu32" seconds.", second_temp, micro_temp);
-    //printf("RTT was: %"PRIu32".%"PRIu32" seconds.", (reflect_pkt.Timestamp.second - reflect_pkt.SenderTimestamp.second), (reflect_pkt.Timestamp.microsecond - reflect_pkt.SenderTimestamp.microsecond));
+    //printf("RTT was: %"PRIu32".%"PRIu32" seconds.", (reflect_pkt.Timestamp.Second - reflect_pkt.SenderTimestamp.Second), (reflect_pkt.Timestamp.Fraction - reflect_pkt.SenderTimestamp.Fraction));
   }
 }
 
@@ -173,7 +173,7 @@ static void receiver(struct simple_udp_connection *c,
     memcpy(&reflect_pkt, data, datalen);
     if(TEST_SESSION == 0) receive_unauth(reflect_pkt);
     if(TEST_SESSION == 1){
-      total_rtt += (reflect_pkt.Timestamp.second - reflect_pkt.SenderTimestamp.second);
+      total_rtt += (reflect_pkt.Timestamp.Second - reflect_pkt.SenderTimestamp.Second);
       rcv_num_pkt++;
     } 
   }
@@ -226,13 +226,13 @@ send_to_unauth(){
   clock = clock_time();
   second = (clock - start_time)/CLOCK_SECOND;
   temp = (double) (clock - start_time)/CLOCK_SECOND - second;
-  t.second = second;
-  t.microsecond = temp * 1000;
-  /*printf("Second: %d\n", t.second);
-    printf("Fraction: %d\n", t.microsecond);*/
+  t.Second = second;
+  t.Fraction = temp * 1000;
+  /*printf("Second: %d\n", t.Second);
+    printf("Fraction: %d\n", t.Fraction);*/
 	
-  //t.second = clock_time() - start_time;
-  //t.microsecond = 0;
+  //t.Second = clock_time() - start_time;
+  //t.Fraction = 0;
   //  printf("msg send at clock time: %d \n",clock);
   printf("%d \n",clock);
   
@@ -260,8 +260,8 @@ send_to_auth(){
   clock = clock_time();
   second = (clock - start_time)/CLOCK_SECOND;
   temp = (double) (clock - start_time)/CLOCK_SECOND - second;
-  t.second = second;
-  t.microsecond = temp * 1000;
+  t.Second = second;
+  t.Fraction = temp * 1000;
   pkt.Timestamp = t;
   simple_udp_sendto(&unicast_connection, &pkt, sizeof(pkt), addr);
  
@@ -311,15 +311,15 @@ static void timesynch_receiver(struct simple_udp_connection *c,
   }
   
   TimesynchMsg time_pkt;
-  time_pkt.timestamp = data_pkt.timestamp;
-  time_pkt.authority_level = authority_level +1 ;
-  time_pkt.dummy = 1;
-  time_pkt.authority_offset = 0;
-  time_pkt.seconds = clock_seconds(); 
-  time_pkt.clock_time = clock_time();
+  time_pkt.Timestamp = data_pkt.Timestamp;
+  time_pkt.AuthorityLevel = authority_level +1 ;
+  time_pkt.Dummy = 1;
+  time_pkt.AuthorityOffset = 0;
+  time_pkt.Seconds = clock_seconds(); 
+  time_pkt.ClockTime = clock_time();
   printf("sent time: %d \n", clock_time());
 
-  time_pkt.prop_time = clock_time() - rec_time;
+  time_pkt.PropTime = clock_time() - rec_time;
 
   simple_udp_sendto(&unicast_synch_connection, &time_pkt, 
 		    sizeof(time_pkt), sender_addr);
@@ -335,12 +335,12 @@ static void timesynch(){
 
   TimesynchMsg time_pkt;
 
-  time_pkt.authority_level = 0;
-  time_pkt.dummy = 0;
-  time_pkt.authority_offset = 0;
-  time_pkt.clock_time = clock_time();
-  time_pkt.seconds = clock_seconds();
-  time_pkt.timestamp = 0;
+  time_pkt.AuthorityLevel = 0;
+  time_pkt.Dummy = 0;
+  time_pkt.AuthorityOffset = 0;
+  time_pkt.ClockTime = clock_time();
+  time_pkt.Seconds = clock_seconds();
+  time_pkt.Timestamp = 0;
 
   
   simple_udp_sendto(&unicast_synch_connection, &time_pkt, 

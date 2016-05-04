@@ -1,6 +1,6 @@
 typedef struct TWAMPtimestamp{
-	uint32_t second;
-	uint32_t microsecond;
+	uint32_t Second;
+	uint32_t Fraction;
 } TWAMPtimestamp;
 
 typedef struct server_greeting{
@@ -37,14 +37,14 @@ typedef struct request_session{
 	uint16_t SenderPort;
 	uint16_t RecieverPort;
 	uint32_t SenderAddress;
-	uint8_t Sender_MBZ[12]; //also sender address continued.
+	uint8_t SenderMBZ[12]; //also sender address continued.
 	uint32_t RecieverAddress;
-	uint8_t Reciever_MBZ[12]; //also receiver address continued.
+	uint8_t RecieverMBZ[12]; //also receiver address continued.
 	uint8_t SID[16];
 	uint32_t PaddingLen;
 	TWAMPtimestamp StartTime;
 	TWAMPtimestamp Timeout;
-	uint32_t TypeP_Desc;
+	uint32_t TypePDesc;
 	uint8_t MBZ[8];
 	uint8_t HMAC[16];
 } RequestSession;
@@ -159,17 +159,17 @@ typedef struct reflector_authenticated_test{
 } ReflectorAuthPacket;
 
 typedef struct timesynch_msg {
-  uint8_t authority_level;
-  uint8_t dummy;
-  uint16_t authority_offset;
-  clock_time_t clock_time;
-  clock_time_t prop_time;
-  uint32_t seconds;
-  uint32_t microseconds;
-  uint16_t timestamp;
+  uint8_t AuthorityLevel;
+  uint8_t Dummy;
+  uint16_t AuthorityOffset;
+  clock_time_t ClockTime;
+  clock_time_t PropTime;
+  uint32_t Seconds;
+  uint32_t Fractions;
+  uint16_t Timestamp;
   /* We need some padding so that the radio has time to update the
      timestamp at the end of the packet, after the transmission has
      started. */
-  uint8_t padding[16];
+  uint8_t Padding[16];
 } TimesynchMsg;
 
