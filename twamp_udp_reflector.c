@@ -77,9 +77,12 @@ reflect_uauth(struct sender_unauthenticated_test sender_pkt,
 	      struct TWAMPtimestamp ts_rcv,
               const uip_ipaddr_t *sender_addr)
 {
+  int clock;
+  int second;
+  double temp;
   //TODO: Set all MBZs to zero!
   ReflectorUAuthPacket reflect_pkt;
-
+  printf("Paket size = %d\n", sizeof(reflect_pkt));
   reflect_pkt.SeqNo = seqno;
   reflect_pkt.ErrorEstimate = 999;
   reflect_pkt.ReceiverTimestamp = ts_rcv;
@@ -88,9 +91,12 @@ reflect_uauth(struct sender_unauthenticated_test sender_pkt,
   reflect_pkt.SenderErrorEstimate = sender_pkt.ErrorEstimate;
   reflect_pkt.SenderTTL = 255;
 
-  //Do proper timestamp here
-  reflect_pkt.Timestamp.second = clock_time() - offset;
-  reflect_pkt.Timestamp.microsecond = 0;
+
+  clock = clock_time()- offset;
+  second = (clock - start_time)/CLOCK_SECOND;
+  temp = (double) (clock - start_time)/CLOCK_SECOND - second;
+  reflect_pkt.Timestamp.second = second;
+  reflect_pkt.Timestamp.microsecond = temp * 1000;
 
   simple_udp_sendto(&unicast_connection, &reflect_pkt, 
 		    sizeof(reflect_pkt), sender_addr);
@@ -111,9 +117,13 @@ reflect_auth(struct sender_authenticated_test sender_pkt,
 	     struct TWAMPtimestamp ts_rcv,
              const uip_ipaddr_t *sender_addr)
 {
+  int clock;
+  int second;
+  double temp;
   //TODO: Set all MBZs to zero!
   ReflectorAuthPacket reflect_pkt;
 
+  printf("Paket size = %d\n", sizeof(reflect_pkt));
   reflect_pkt.SeqNo = seqno;
   reflect_pkt.ErrorEstimate = 999;
   reflect_pkt.ReceiverTimestamp = ts_rcv;
@@ -122,9 +132,13 @@ reflect_auth(struct sender_authenticated_test sender_pkt,
   reflect_pkt.SenderErrorEstimate = sender_pkt.ErrorEstimate;
   reflect_pkt.SenderTTL = 255;
 
-  //Do proper timestamp here
-  reflect_pkt.Timestamp.second = clock_time() - offset;
-  reflect_pkt.Timestamp.microsecond = 222;
+
+  clock = clock_time()- offset;
+  second = (clock - start_time)/CLOCK_SECOND;
+  temp = (double) (clock - start_time)/CLOCK_SECOND - second;
+  reflect_pkt.Timestamp.second = second;
+  reflect_pkt.Timestamp.microsecond = temp * 1000;
+
 
   simple_udp_sendto(&unicast_connection, &reflect_pkt, 
 		    sizeof(reflect_pkt), sender_addr);
@@ -149,15 +163,18 @@ receiver(struct simple_udp_connection *c,
 	 const uint8_t *data,
          uint16_t datalen)
 {
+  int clock;
+  int second;
+  double temp;
 
   printf("recieved msg at clock time: %d ",clock_time()-  offset - prop_delay);
   
   TWAMPtimestamp ts_rcv;
-  //Do proper timestamp here!
- 
-  printf("offset: %d \n",offset);
-  ts_rcv.second = clock_time() - offset;
-  ts_rcv.microsecond = 0;
+  clock = clock_time() - offset;
+  second = (clock - start_time)/CLOCK_SECOND;
+  temp = (double) (clock - start_time)/CLOCK_SECOND - second;
+  ts_rcv.second = second;
+  ts_rcv.microsecond = temp * 1000;
 
   printf("Data received from ");  
   uip_debug_ipaddr_print(sender_addr);

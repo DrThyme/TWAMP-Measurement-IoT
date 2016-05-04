@@ -112,7 +112,7 @@ typedef struct sender_unauthenticated_test{
 	uint32_t SeqNo;
 	TWAMPtimestamp Timestamp;
 	uint16_t ErrorEstimate;
-	//uint8_t Padding[]; size of padding?
+	uint8_t Padding[28];
 } SenderUAuthPacket;
 
 typedef struct reflector_unauthenticated_test{
@@ -153,7 +153,7 @@ typedef struct reflector_authenticated_test{
 	uint16_t SenderErrorEstimate;
 	uint8_t MBZ5[6];
 	uint8_t SenderTTL;
-	uint8_t MBZ6[15];
+	//uint8_t MBZ6[15];
 	uint8_t HMAC[16];
 	//uint8_t Padding[] what size should the padding be?
 } ReflectorAuthPacket;

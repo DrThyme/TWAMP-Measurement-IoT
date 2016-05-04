@@ -31,6 +31,7 @@
  */
 
 #include "clock.h"
+#include "sys/rtimer.h"
 #include "contiki.h"
 #include "lib/random.h"
 #include "sys/ctimer.h"
@@ -38,6 +39,8 @@
 #include "net/ip/uip.h"
 #include "net/ipv6/uip-ds6.h"
 #include "net/ip/uip-debug.h"
+
+#include "powertrace.h"
 
 #include "sys/node-id.h"
 
@@ -58,7 +61,7 @@
 #define SEND_TIME		(random_rand() % (SEND_INTERVAL))
 
 #define AUTH_MODE 0
-#define TEST_SESSION 1
+#define TEST_SESSION 0
 #define TEST_AMOUNT 20
 
 static struct simple_udp_connection unicast_connection;
@@ -84,6 +87,7 @@ AUTOSTART_PROCESSES(&twamp_udp_sender);
 /*---------------------------------------------------------------------------*/
 static void receive_unauth(struct reflector_unauthenticated_test reflect_pkt){
 
+
   //Prints for debugging
   printf("SeqNo: %"PRIu32"\n", reflect_pkt.SeqNo);
   printf("RS-Seconds: %"PRIu32"\n", reflect_pkt.Timestamp.second);
@@ -98,8 +102,16 @@ static void receive_unauth(struct reflector_unauthenticated_test reflect_pkt){
   printf("Sender Error: %"PRIu16"\n", reflect_pkt.SenderErrorEstimate);
 
   printf("Sender TTL: %d\n", reflect_pkt.SenderTTL);
+  //TODO: Make the calculation take into consideration microseconds in relation to seconds. I.e. 6.4 - 5.5 = 0.9 and not 1.-1 
   if((reflect_pkt.SeqNo - reflect_pkt.SenderSeqNo) == 0){
-    printf("RTT was: %"PRIu32" ticks.", (reflect_pkt.Timestamp.second - reflect_pkt.SenderTimestamp.second));
+    uint32_t second_temp = reflect_pkt.Timestamp.second - reflect_pkt.SenderTimestamp.second;
+    uint32_t micro_temp = reflect_pkt.Timestamp.microsecond - reflect_pkt.SenderTimestamp.microsecond;
+    if(micro_temp < 0){
+      second_temp = second_temp - 1;
+      micro_temp = 1 + micro_temp;
+    }
+    printf("RTT was: %"PRIu32".%"PRIu32" seconds.", second_temp, micro_temp);
+    //printf("RTT was: %"PRIu32".%"PRIu32" seconds.", (reflect_pkt.Timestamp.second - reflect_pkt.SenderTimestamp.second), (reflect_pkt.Timestamp.microsecond - reflect_pkt.SenderTimestamp.microsecond));
   }
 }
 /*---------------------------------------------------------------------------*/
@@ -121,8 +133,16 @@ static void receive_auth(struct reflector_authenticated_test reflect_pkt){
   printf("Sender Error: %"PRIu16"\n", reflect_pkt.SenderErrorEstimate);
 
   printf("Sender TTL: %d\n", reflect_pkt.SenderTTL);
+  //TODO: Make the calculation take into consideration microseconds in relation to seconds. I.e. 6.4 - 5.5 = 0.9 and not 1.-1 
   if((reflect_pkt.SeqNo - reflect_pkt.SenderSeqNo) == 0){
-    printf("RTT was: %"PRIu32" ticks.", (reflect_pkt.Timestamp.second - reflect_pkt.SenderTimestamp.second));
+    uint32_t second_temp = reflect_pkt.Timestamp.second - reflect_pkt.SenderTimestamp.second;
+    uint32_t micro_temp = reflect_pkt.Timestamp.microsecond - reflect_pkt.SenderTimestamp.microsecond;
+    if(micro_temp < 0){
+      second_temp = second_temp - 1;
+      micro_temp = 1 + micro_temp;
+    }
+    printf("RTT was: %"PRIu32".%"PRIu32" seconds.", second_temp, micro_temp);
+    //printf("RTT was: %"PRIu32".%"PRIu32" seconds.", (reflect_pkt.Timestamp.second - reflect_pkt.SenderTimestamp.second), (reflect_pkt.Timestamp.microsecond - reflect_pkt.SenderTimestamp.microsecond));
   }
 }
 
@@ -136,16 +156,17 @@ static void receiver(struct simple_udp_connection *c,
 		     const uint8_t *data,
 		     uint16_t datalen)
 {
-
-  printf("received msg on clock time: %d",clock_time());
-
-  printf("Data received from "); 
-  uip_debug_ipaddr_print(sender_addr);
-  printf(" on port %d from port %d \n",
-	 receiver_port, sender_port);
-  printf("###############\n");
+ 
+  /*	
+	printf("received msg on clock time: %d",clock_time());
+	printf("Data received from "); 
+	uip_debug_ipaddr_print(sender_addr);
+	printf(" on port %d from port %d \n",
+	receiver_port, sender_port);
+  */
   if(AUTH_MODE == 0){
     ReflectorUAuthPacket reflect_pkt;  
+    printf("Sizeof reflect pkt: %d",sizeof(reflect_pkt));
     memset(&reflect_pkt,0,sizeof(reflect_pkt));
     memcpy(&reflect_pkt, data, datalen);
     if(TEST_SESSION == 0) receive_unauth(reflect_pkt);
@@ -171,7 +192,7 @@ static void set_global_address(void)
   uip_ip6addr(&ipaddr, 0xaaaa, 0, 0, 0, 0, 0, 0, 0);
   uip_ds6_set_addr_iid(&ipaddr, &uip_lladdr);
   uip_ds6_addr_add(&ipaddr, 0, ADDR_AUTOCONF);
-
+	
   printf("IPv6 addresses: ");
   for(i = 0; i < UIP_DS6_ADDR_NB; i++) {
     state = uip_ds6_if.addr_list[i].state;
@@ -181,22 +202,35 @@ static void set_global_address(void)
       printf("\n");
     }
   }
+  
 }
 /*---------------------------------------------------------------------------*/
 static void
 send_to_unauth(){
   static struct sender_unauthenticated_test pkt;
   static struct TWAMPtimestamp t;
+  int second;
+  double temp;
+  int clock;
   pkt.SeqNo = seq_id;
   pkt.ErrorEstimate = 666;
+  /*printf("Sending unicast to ");
+    uip_debug_ipaddr_print(addr);
+    printf("\n");*/
 
-  printf("Sending unicast to ");
-  uip_debug_ipaddr_print(addr);
-  printf(" at clock time: %d \n", clock_time());
+  printf("Size of send pkt: %d",sizeof(pkt));
 
   seq_id++;
-  t.second = clock_time() - start_time;
-  t.microsecond = 0;
+  clock = clock_time();
+  second = (clock - start_time)/CLOCK_SECOND;
+  temp = (double) (clock - start_time)/CLOCK_SECOND - second;
+  t.second = second;
+  t.microsecond = temp * 1000;
+  /*printf("Second: %d\n", t.second);
+    printf("Fraction: %d\n", t.microsecond);*/
+	
+  //t.second = clock_time() - start_time;
+  //t.microsecond = 0;
   pkt.Timestamp = t;
   simple_udp_sendto(&unicast_connection, &pkt, sizeof(pkt), addr);
 }
@@ -206,18 +240,25 @@ static void
 send_to_auth(){
   static struct sender_authenticated_test pkt;
   static struct TWAMPtimestamp t;
+  int second;
+  int clock;
+  double temp;
   pkt.SeqNo = seq_id;
   pkt.ErrorEstimate = 666;
 
-  printf("Sending unicast to ");
-  uip_debug_ipaddr_print(addr);
-  printf("\n");
+  /*printf("Sending unicast to ");
+    uip_debug_ipaddr_print(addr);
+    printf("\n");*/
 
   seq_id++;
-  t.second = clock_time() - start_time;
-  t.microsecond = 0;
+  clock = clock_time();
+  second = (clock - start_time)/CLOCK_SECOND;
+  temp = (double) (clock - start_time)/CLOCK_SECOND - second;
+  t.second = second;
+  t.microsecond = temp * 1000;
   pkt.Timestamp = t;
   simple_udp_sendto(&unicast_connection, &pkt, sizeof(pkt), addr);
+ 
 }
 /*---------------------------------------------------------------------------*/
 static void print_statistics(){
@@ -306,18 +347,22 @@ static void timesynch(){
 PROCESS_THREAD(twamp_udp_sender, ev, data){
   static struct etimer periodic_timer;
   static struct etimer send_timer;
+  static double test;
+  static int test2;
+	
 
   PROCESS_BEGIN();
 
-  // clock_init();
-
-  authority_level = 1;
 
   servreg_hack_init();
 
   set_global_address();
 
   start_time = clock_time();
+
+
+  authority_level = 1;
+
   simple_udp_register(&unicast_synch_connection, UDP_TIMESYNCH_PORT,
 		      NULL, UDP_TIMESYNCH_PORT, timesynch_receiver);
   
@@ -329,20 +374,12 @@ PROCESS_THREAD(twamp_udp_sender, ev, data){
 
   timesynch();
 
-  
-
-  /*synch_var = 0;
-    while(synch_var ==0){
-    if(synch_var == 1){
-    break;
-    }
-    }*/
 
   simple_udp_register(&unicast_connection, UDP_PORT,
 		      NULL, UDP_PORT, receiver);
 
   etimer_set(&periodic_timer, SEND_INTERVAL);
-  if(TEST_SESSION == 0 ){
+  if(TEST_SESSION == 0){
     while(1) {
       PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
       etimer_reset(&periodic_timer);
@@ -365,32 +402,57 @@ PROCESS_THREAD(twamp_udp_sender, ev, data){
     }
   }else if(TEST_SESSION == 1){
     static int i = 0;
-    while(i < TEST_AMOUNT) {
+    static int flag = 1;
+    static powertrace_on = 0;
+    etimer_set(&periodic_timer, SEND_INTERVAL);
+    while(flag){
       PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
+      etimer_reset(&periodic_timer);
+      addr = servreg_hack_lookup(SERVICE_ID);
+      if(addr != NULL){
+	flag = 0;
+      } else{
+	printf("Service %d not found, retrying!\n", SERVICE_ID);
+      }
+    }
+    etimer_set(&periodic_timer, SEND_INTERVAL);
+    while(i < TEST_AMOUNT) {
+      if(powertrace_on == 0){
+	powertrace_start(CLOCK_SECOND * 1);
+	powertrace_on = 1;
+      }
+      PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
+
       etimer_reset(&periodic_timer);
       etimer_set(&send_timer, SEND_TIME);
 
       PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&send_timer));
-      addr = servreg_hack_lookup(SERVICE_ID);
-      if(addr != NULL) {
-	if(AUTH_MODE == 0){
-	  send_to_unauth();
-	  i++;
-	}
-	else if(AUTH_MODE == 1){
-	  send_to_auth();
-	  i++;
-	}
-
-
-      } else {
-	printf("Service %d not found\n", SERVICE_ID);
+      if(AUTH_MODE == 0){
+	send_to_unauth();
+	i++;
       }
+      else if(AUTH_MODE == 1){
+	send_to_auth();
+	i++;
+      }
+
+
     }
-    print_statistics();
-    printf("Test session finished!\n");
+    //print_statistics();
+    powertrace_stop();
+    //printf("Test session finished!\n");
   }
+
+
+  else {
+    printf("Service %d not found\n", SERVICE_ID);
+  }
+
+  print_statistics();
+  printf("Test session finished!\n");
+
 
   PROCESS_END();
 }
+
 /*---------------------------------------------------------------------------*/
