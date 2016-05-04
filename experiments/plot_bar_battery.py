@@ -12,8 +12,8 @@ import csv
  
  
 from collections import defaultdict
-#filelist = ['log10.txt','log20.txt', 'log30.txt', 'log40.txt', 'log50.txt']
-filelist = ['log_time1.txt','log_time2.txt', 'log_time4.txt', 'log_time8.txt', 'log_time16.txt']
+filelist = ['log_amount10.txt','log_amount20.txt', 'log_amount30.txt', 'log_amount40.txt', 'log_amount50.txt','log_amount60.txt','log_amount70.txt', 'log_amount80.txt', 'log_amount90.txt', 'log_amount100.txt']
+#filelist = ['log_time1.txt','log_time2.txt', 'log_time4.txt', 'log_time8.txt', 'log_time16.txt']
 listen = []
 transmit = []
 
@@ -29,6 +29,13 @@ active_state = 8 * pow(10,-3) # this value is to be less than 10, probably in th
 rx_state = 18.8 * pow(10,-3)
 tx_state = 17.4 * pow(10,-3)
 
+def convert_mA(values):
+    out_values = []
+    for value in values:
+        value = ((value/1000.0)/volt_usage)*1000
+        out_values.append(value)
+    return out_values
+
 
 for name in filelist: 
     cpuOverTime =  defaultdict(list)
@@ -40,27 +47,32 @@ for name in filelist:
         reader = csv.reader(f,delimiter=' ')
         i = 0
         for row in reader:
-            if row[2] is 'P':
-                totalCPU += (int(row[11]))#*(active_state*volt_usage))/r_timer
-                totalLPM += (int(row[12]))#*(standby_state*volt_usage))/r_timer
-                totalTransmit += (int(row[13]))#*(active_state+tx_state)*volt_usage)/r_timer
-                totalListen += (int(row[11]))#*(active_state+rx_state)*volt_usage)/r_timer
+            if row[2] is 'P': 
+                totalCPU += (int(row[11])*(active_state*volt_usage))/r_timer
+                totalLPM += (int(row[12])*(standby_state*volt_usage))/r_timer
+                totalTransmit += (int(row[13])*(active_state+tx_state)*volt_usage)/r_timer
+                totalListen += (int(row[11])*(active_state+rx_state)*volt_usage)/r_timer
     transmit.append(totalTransmit)
     listen.append(totalListen) 
-#objects = ('10', '20', '30','40','50')
-objects = ('1', '2', '4','8','16')
+objects = ('10', '20', '30','40','50','60', '70', '80','90','100')
+#objects = ('1', '2', '4','8','16')
 y_pos = np.arange(len(objects))
 width = 0.35
+
+transmit = convert_mA(transmit)
+listen = convert_mA(listen)
+print transmit
+print listen
 
 fig, ax = plt.subplots()
 rects1 = ax.bar(y_pos,transmit,width,color='r')
 rects2 = ax.bar(y_pos,listen,width,color='y',bottom=transmit)
 
 ax.set_ylabel('Consumption')
-#ax.set_xlabel('# of packets')
-ax.set_xlabel('Time(s)')
-#ax.set_title('Consumption vs Packet Amount')
-ax.set_title('Consumption vs Send intervall')
+ax.set_xlabel('# of packets')
+#ax.set_xlabel('Time(s)')
+ax.set_title('Consumption vs Packet Amount')
+#ax.set_title('Consumption vs Send intervall')
 ax.set_xticks(y_pos + width/2)
 ax.set_xticklabels(objects)
 

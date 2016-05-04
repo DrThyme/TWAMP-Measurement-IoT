@@ -50,8 +50,8 @@
 #include <string.h>
 #include <inttypes.h>
 
-#define UDP_PORT 1234
-#define SERVICE_ID 190
+#define UDP_PORT 1554
+#define SERVICE_ID 180
 
 #define SEND_INTERVAL		(10 * CLOCK_SECOND)
 #define SEND_TIME		(random_rand() % (SEND_INTERVAL))
