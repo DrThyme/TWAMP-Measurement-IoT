@@ -51,15 +51,23 @@
 #include <inttypes.h>
 
 #define UDP_PORT 1234
+#define UDP_SYNCH_PORT 4321
 #define SERVICE_ID 190
 
 #define SEND_INTERVAL		(10 * CLOCK_SECOND)
 #define SEND_TIME		(random_rand() % (SEND_INTERVAL))
 
 static struct simple_udp_connection unicast_connection;
+static struct simple_udp_connection unicast_synch_connection;
+
 static uint32_t seqno = 0;
 static int AUTH_MODE = 0;
 static clock_time_t start_time;
+
+static int authority_level;
+static rtimer_clock_t offset;
+static int prop_delay;
+
 /*---------------------------------------------------------------------------*/
 PROCESS(twamp_udp_reflector, "TWAMP UDP Reflector Process");
 AUTOSTART_PROCESSES(&twamp_udp_reflector);
@@ -81,11 +89,11 @@ reflect_uauth(struct sender_unauthenticated_test sender_pkt,
   reflect_pkt.SenderTTL = 255;
 
   //Do proper timestamp here
-  reflect_pkt.Timestamp.second = clock_time() - start_time;
+  reflect_pkt.Timestamp.second = clock_time() - offset;
   reflect_pkt.Timestamp.microsecond = 0;
 
   simple_udp_sendto(&unicast_connection, &reflect_pkt, 
-	sizeof(reflect_pkt), sender_addr);
+		    sizeof(reflect_pkt), sender_addr);
 
   printf("Packet reflected to:\n");
   uip_debug_ipaddr_print(sender_addr);
@@ -115,11 +123,11 @@ reflect_auth(struct sender_authenticated_test sender_pkt,
   reflect_pkt.SenderTTL = 255;
 
   //Do proper timestamp here
-  reflect_pkt.Timestamp.second = clock_time() - start_time;
+  reflect_pkt.Timestamp.second = clock_time() - offset;
   reflect_pkt.Timestamp.microsecond = 222;
 
   simple_udp_sendto(&unicast_connection, &reflect_pkt, 
-	sizeof(reflect_pkt), sender_addr);
+		    sizeof(reflect_pkt), sender_addr);
 
   printf("Packet reflected to:\n");
   uip_debug_ipaddr_print(sender_addr);
@@ -142,9 +150,13 @@ receiver(struct simple_udp_connection *c,
          uint16_t datalen)
 {
 
+  printf("recieved msg at clock time: %d ",clock_time()-  offset - prop_delay);
+  
   TWAMPtimestamp ts_rcv;
   //Do proper timestamp here!
-  ts_rcv.second = clock_time()-start_time;
+ 
+  printf("offset: %d \n",offset);
+  ts_rcv.second = clock_time() - offset;
   ts_rcv.microsecond = 0;
 
   printf("Data received from ");  
@@ -152,15 +164,15 @@ receiver(struct simple_udp_connection *c,
   printf(" on port %d from port %d \n", receiver_port, sender_port);
   
   if(AUTH_MODE == 0){
-  	SenderUAuthPacket sender_pkt;
-	memset(&sender_pkt, 0, sizeof(sender_pkt));
- 	memcpy(&sender_pkt, data, datalen);
-    	reflect_uauth(sender_pkt,ts_rcv,sender_addr);
+    SenderUAuthPacket sender_pkt;
+    memset(&sender_pkt, 0, sizeof(sender_pkt));
+    memcpy(&sender_pkt, data, datalen);
+    reflect_uauth(sender_pkt,ts_rcv,sender_addr);
   }else if(AUTH_MODE == 1){
-  	SenderAuthPacket sender_pkt;
-	memset(&sender_pkt, 0, sizeof(sender_pkt));
-	memcpy(&sender_pkt, data, datalen);
-	reflect_auth(sender_pkt,ts_rcv,sender_addr);
+    SenderAuthPacket sender_pkt;
+    memset(&sender_pkt, 0, sizeof(sender_pkt));
+    memcpy(&sender_pkt, data, datalen);
+    reflect_auth(sender_pkt,ts_rcv,sender_addr);
   }
   
 }
@@ -208,12 +220,84 @@ create_rpl_dag(uip_ipaddr_t *ipaddr)
     PRINTF("failed to create a new RPL DAG\n");
   }
 }
+
+/*---------------------------------------------------------------------------*/
+static void
+adjust_offset(rtimer_clock_t startup_time, rtimer_clock_t processing_time, 
+	      rtimer_clock_t local_time, rtimer_clock_t absolute_time){
+
+  
+  prop_delay = (local_time - startup_time - processing_time)/2;
+   
+  offset = local_time - absolute_time - prop_delay;  
+
+  printf("##########################################\n");
+  printf("Startup_time: %d \n", startup_time);
+  printf("processing_time: %d\n",processing_time);
+  printf("Local_time: %d \n", local_time);
+  printf("Absolute_time: %d \n", absolute_time);
+  printf("clock_time() %d \n", clock_time());
+  printf("Propagation_delay: %d \n", prop_delay);
+  printf("##########################################\n");
+  printf("offset: %d \n", offset);
+}
+
+
+static void
+timesynch_set_authority_level(int level){
+  int old_level = authority_level;
+  authority_level = level;
+}
+
+static timesynch(struct simple_udp_connection *c,
+		 const uip_ipaddr_t *sender_addr,
+		 uint16_t sender_port,
+		 const uip_ipaddr_t *receiver_addr,
+		 uint16_t receiver_port,
+		 const uint8_t *data,
+		 uint16_t datalen){
+  
+  TimesynchMsg time_pkt;
+
+  printf("Time synch msg received on port %d \n", receiver_port);
+
+
+  memset(&time_pkt, 0, sizeof(time_pkt));
+  memcpy(&time_pkt, data, datalen);
+
+  if(time_pkt.dummy == 0){
+    time_pkt.timestamp = clock_time();
+    printf("time at timestamp: %d \n",clock_time());
+    simple_udp_sendto(&unicast_synch_connection, &time_pkt, 
+		      sizeof(time_pkt), sender_addr);
+    printf("Time synch handshake initiated \n");
+  }
+  else{
+    //  if(time_pkt.authority_level < authority_level) {
+      adjust_offset(time_pkt.timestamp, time_pkt.prop_time, 
+		    clock_time(), time_pkt.clock_time);
+      timesynch_set_authority_level(time_pkt.authority_level + 1);
+      //}
+    
+    simple_udp_sendto(&unicast_synch_connection, &time_pkt, 
+		      sizeof(time_pkt), sender_addr);
+
+    printf("Time synch complete \n");
+    printf("Current time: %d offset: %d \n",clock_time(), offset);
+    
+
+  }
+ 
+
+}
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(twamp_udp_reflector, ev, data)
 {
   uip_ipaddr_t *ipaddr;
 
   PROCESS_BEGIN();
+
+  // clock_init();
 
   servreg_hack_init();
 
@@ -227,6 +311,10 @@ PROCESS_THREAD(twamp_udp_reflector, ev, data)
 
   simple_udp_register(&unicast_connection, UDP_PORT,
                       NULL, UDP_PORT, receiver);
+   
+  simple_udp_register(&unicast_synch_connection, UDP_SYNCH_PORT,
+                      NULL, UDP_SYNCH_PORT, timesynch);
+
 
   while(1) {
     PROCESS_WAIT_EVENT();

@@ -157,3 +157,19 @@ typedef struct reflector_authenticated_test{
 	uint8_t HMAC[16];
 	//uint8_t Padding[] what size should the padding be?
 } ReflectorAuthPacket;
+
+typedef struct timesynch_msg {
+  uint8_t authority_level;
+  uint8_t dummy;
+  uint16_t authority_offset;
+  clock_time_t clock_time;
+  clock_time_t prop_time;
+  uint32_t seconds;
+  uint32_t microseconds;
+  uint16_t timestamp;
+  /* We need some padding so that the radio has time to update the
+     timestamp at the end of the packet, after the transmission has
+     started. */
+  uint8_t padding[16];
+} TimesynchMsg;
+
