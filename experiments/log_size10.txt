@@ -1,0 +1,68 @@
+using saved target 'z1'
+../../contiki/tools/sky/serialdump-linux -b115200 /dev/ttyUSB0
+Rime started with address 193.12.0.0.0.0.0.33
+MAC c1:0c:00:00:00:00:00:21 Ref ID: 359
+Contiki-3.x-1359-geaa8760 started. Node id is set to 17.
+CSMA ContikiMAC, channel check rate 8 Hz, radio channel 26
+Tentative link-local IPv6 address fe80:0000:0000:0000:c30c:0000:0000:0021
+Starting 'TWAMP UDP Sender Process'
+IPv6 addresses: aaaa::c30c:0:0:21
+fe80::c30c:0:0:21
+Time synch start 
+size of time _pkt: 38 
+Service 190 not found, retrying!
+Service 190 not found, retrying!
+Service 190 not found, retrying!
+Service 190 not found, retrying!
+Service 190 not found, retrying!
+Service 190 not found, retrying!
+Service 190 not found, retrying!
+Service 190 not found, retrying!
+Service 190 not found, retrying!
+Service 190 not found, retrying!
+Service 190 not found, retrying!
+Service 190 not found, retrying!
+Service 190 not found, retrying!
+Service 190 not found, retrying!
+Service 190 not found, retrying!
+Service 190 not found, retrying!
+Service 190 not found, retrying!
+Service 190 not found, retrying!
+Service 190 not found, retrying!
+Service 190 not found, retrying!
+Service 190 not found, retrying!
+Service 190 not found, retrying!
+ 17389 P 193.12 0 476622 3948234 268049 158681 0 0 476622 3948234 268049 158681 0 0 (radio 9.64% / 9.64% tx 6.05% / 6.05% listen 3.58% / 3.58%)
+ 18669 P 193.12 1 596431 4156090 335967 202012 0 0 119808 207856 67918 43331 0 0 (radio 11.-872% / 33.95% tx 7.06% / 20.72% listen 4.25% / 13.22%)
+ 19945 P 193.12 2 712276 4366795 400359 246023 0 0 115843 210705 64392 44011 0 0 (radio 12.-773% / 33.19% tx 7.88% / 19.71% listen 4.84% / 13.47%)
+ 21229 P 193.12 3 831235 4576634 467853 288437 0 0 118958 209839 67494 42414 0 0 (radio 13.-696% / 33.42% tx 8.-730% / 20.52% listen 5.33% / 12.89%)
+ 22505 P 193.12 4 893853 4840486 500559 311256 0 0 62616 263852 32706 22819 0 0 (radio 14.-734% / 17.00% tx 8.-677% / 10.01% listen 5.42% / 6.98%)
+ 23789 P 193.12 5 991895 5071174 555472 347613 0 0 98041 230688 54913 36357 0 0 (radio 14.-1328% / 27.76% tx 9.-693% / 16.70% listen 5.73% / 11.05%)
+ 25069 P 193.12 6 1114379 5276280 624371 392819 0 0 122483 205106 68899 45206 0 0 (radio 15.-1253% / 34.83% tx 9.-596% / 21.03% listen 6.14% / 13.79%)
+------------------------------------
+We lost 14 packets.
+Average RTT was: 0
+------------------------------------
+Test session finished!
+Rime started with address 193.12.0.0.0.0.0.33
+MAC c1:0c:00:00:00:00:00:21 Ref ID: 359
+Contiki-3.x-1359-geaa8760 started. Node id is set to 17.
+CSMA ContikiMAC, channel check rate 8 Hz, radio channel 26
+Tentative link-local IPv6 address fe80:0000:0000:0000:c30c:0000:0000:0021
+Starting 'TWAMP UDP Sender Process'
+IPv6 addresses: aaaa::c30c:0:0:21
+fe80::c30c:0:0:21
+Time synch start 
+size of time _pkt: 38 
+ 3324 P 193.12 0 154182 670185 92250 42285 0 0 154182 670185 92250 42285 0 0 (radio 16.31% / 16.31% tx 11.19% / 11.19% listen 5.12% / 5.12%)
+ 4604 P 193.12 1 177361 974670 104047 50151 0 0 23177 304485 11797 7866 0 0 (radio 13.38% / 6.00% tx 9.03% / 3.60% listen 4.35% / 2.40%)
+ 5884 P 193.12 2 198160 1281532 114147 57130 0 0 20797 306862 10100 6979 0 0 (radio 11.57% / 5.21% tx 7.71% / 3.08% listen 3.86% / 2.12%)
+ 7164 P 193.12 3 209571 1597782 117933 61804 0 0 11409 316250 3786 4674 0 0 (radio 9.94% / 2.58% tx 6.52% / 1.15% listen 3.41% / 1.42%)
+ 8444 P 193.12 4 215428 1919599 118674 64982 0 0 5855 321817 741 3178 0 0 (radio 8.60% / 1.19% tx 5.55% / 0.22% listen 3.04% / 0.96%)
+ 9724 P 193.12 5 238482 2224217 129804 70752 0 0 23053 304618 11130 5770 0 0 (radio 8.14% / 5.15% tx 5.27% / 3.39% listen 2.87% / 1.76%)
+ 11004 P 193.12 6 252832 2537540 136134 75600 0 0 14349 313323 6330 4848 0 0 (radio 7.58% / 3.41% tx 4.87% / 1.93% listen 2.70% / 1.47%)
+------------------------------------
+We lost 14 packets.
+Average RTT was: 0
+------------------------------------
+Test session finished!

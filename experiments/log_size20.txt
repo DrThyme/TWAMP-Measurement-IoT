@@ -1,0 +1,58 @@
+using saved target 'z1'
+../../contiki/tools/sky/serialdump-linux -b115200 /dev/ttyUSB0
+Rime started with address 193.12.0.0.0.0.0.33
+MAC c1:0c:00:00:00:00:00:21 Ref ID: 359
+Contiki-3.x-1359-geaa8760 started. Node id is set to 17.
+CSMA ContikiMAC, channel check rate 8 Hz, radio channel 26
+Tentative link-local IPv6 address fe80:0000:0000:0000:c30c:0000:0000:0021
+Starting 'TWAMP UDP Sender Process'
+IPv6 addresses: aaaa::c30c:0:0:21
+fe80::c30c:0:0:21
+Rime started with address 193.12.0.0.0.0.0.33
+MAC c1:0c:00:00:00:00:00:21 Ref ID: 359
+Contiki-3.x-1359-geaa8760 started. Node id is set to 17.
+CSMA ContikiMAC, channel check rate 8 Hz, radio channel 26
+Tentative link-local IPv6 address fe80:0000:0000:0000:c30c:0000:0000:0021
+Starting 'TWAMP UDP Sender Process'
+IPv6 addresses: aaaa::c30c:0:0:21
+fe80::c30c:0:0:21
+Rime started with address 193.12.0.0.0.0.0.33
+MAC c1:0c:00:00:00:00:00:21 Ref ID: 359
+Contiki-3.x-1359-geaa8760 started. Node id is set to 17.
+CSMA ContikiMAC, channel check rate 8 Hz, radio channel 26
+Tentative link-local IPv6 address fe80:0000:0000:0000:c30c:0000:0000:0021
+Starting 'TWAMP UDP Sender Process'
+IPv6 addresses: aaaa::c30c:0:0:21
+fe80::c30c:0:0:21
+Rime started with address 193.12.0.0.0.0.0.33
+MAC c1:0c:00:00:00:00:00:21 Ref ID: 359
+Contiki-3.x-1359-geaa8760 started. Node id is set to 17.
+CSMA ContikiMAC, channel check rate 8 Hz, radio channel 26
+Tentative link-local IPv6 address fe80:0000:0000:0000:c30c:0000:0000:0021
+Starting 'TWAMP UDP Sender Process'
+IPv6 addresses: aaaa::c30c:0:0:21
+fe80::c30c:0:0:21
+Time synch start 
+size of time _pkt: 38 
+Rime started with address 193.12.0.0.0.0.0.33
+MAC c1:0c:00:00:00:00:00:21 Ref ID: 359
+Contiki-3.x-1359-geaa8760 started. Node id is set to 17.
+CSMA ContikiMAC, channel check rate 8 Hz, radio channel 26
+Tentative link-local IPv6 address fe80:0000:0000:0000:c30c:0000:0000:0021
+Starting 'TWAMP UDP Sender Process'
+IPv6 addresses: aaaa::c30c:0:0:21
+fe80::c30c:0:0:21
+Time synch start 
+size of time _pkt: 38 
+ 3306 P 193.12 0 161874 657849 89230 56530 0 0 161874 657849 89230 56530 0 0 (radio 17.78% / 17.78% tx 10.88% / 10.88% listen 6.89% / 6.89%)
+ 4587 P 193.12 1 253331 894317 141673 89331 0 0 91456 236468 52443 32801 0 0 (radio 20.12% / 25.99% tx 12.34% / 15.99% listen 7.78% / 10.00%)
+ 5866 P 193.12 2 323707 1151297 182040 111488 0 0 70375 256980 40367 22157 0 0 (radio 19.90% / 19.09% tx 12.34% / 12.33% listen 7.55% / 6.76%)
+ 7146 P 193.12 3 409329 1393343 232240 141386 0 0 85621 242046 50200 29898 0 0 (radio 20.72% / 24.44% tx 12.88% / 15.32% listen 7.84% / 9.12%)
+ 8426 P 193.12 4 505590 1624682 289676 172878 0 0 96259 231339 57436 31492 0 0 (radio 21.-1945% / 27.14% tx 13.59% / 17.53% listen 8.11% / 9.61%)
+ 9706 P 193.12 5 603880 1854045 347237 205073 0 0 98288 229363 57561 32195 0 0 (radio 22.-1701% / 27.39% tx 14.12% / 17.56% listen 8.34% / 9.82%)
+ 10986 P 193.12 6 708588 2076980 409835 239637 0 0 104707 222935 62598 34564 0 0 (radio 23.-1511% / 29.65% tx 14.71% / 19.10% listen 8.60% / 10.54%)
+------------------------------------
+We lost 14 packets.
+Average RTT was: 0
+------------------------------------
+Test session finished!
