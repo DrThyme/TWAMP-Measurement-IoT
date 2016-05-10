@@ -1,32 +1,3 @@
-using saved target 'z1'
-../../contiki/tools/sky/serialdump-linux -b115200 /dev/ttyUSB0
-Rime started with address 193.12.0.0.0.0.0.33
-MAC c1:0c:00:00:00:00:00:21 Ref ID: 359
-Contiki-3.x-1359-geaa8760 started. Node id is set to 17.
-CSMA ContikiMAC, channel check rate 8 Hz, radio channel 26
-Tentative link-local IPv6 address fe80:0000:0000:0000:c30c:0000:0000:0021
-Starting 'TWAMP UDP Sender Process'
-IPv6 addresses: aaaa::c30c:0:0:21
-fe80::c30c:0:0:21
-Rime started with address 193.12.0.0.0.0.0.33
-MAC c1:0c:00:00:00:00:00:21 Ref ID: 359
-Contiki-3.x-1359-geaa8760 started. Node id is set to 17.
-CSMA ContikiMAC, channel check rate 8 Hz, radio channel 26
-Tentative link-local IPv6 address fe80:0000:0000:0000:c30c:0000:0000:0021
-Starting 'TWAMP UDP Sender Process'
-IPv6 addresses: aaaa::c30c:0:0:21
-fe80::c30c:0:0:21
-Time synch start 
-size of time _pkt: 38 
-receive time: 1398 
-Time synch msg received on port 4321 
- sent time: 1399 
-Absolute time sent 
-sent time2: 1400 
-receive time: 1415 
-Time synch msg received on port 4321 
- Time synch done 
-current time: 1415 
  3305 P 193.12 0 29883 789545 14508 7897 0 0 29883 789545 14508 7897 0 0 (radio 2.73% / 2.73% tx 1.77% / 1.77% listen 0.96% / 0.96%)
  4585 P 193.12 1 49021 1098046 24717 13091 0 0 19137 308501 10209 5194 0 0 (radio 3.29% / 4.70% tx 2.15% / 3.11% listen 1.14% / 1.58%)
  5865 P 193.12 2 60681 1414002 30554 17387 0 0 11659 315956 5837 4296 0 0 (radio 3.25% / 3.09% tx 2.07% / 1.78% listen 1.17% / 1.31%)
@@ -34,8 +5,3 @@ current time: 1415
  8425 P 193.12 4 78839 2051109 38197 23648 0 0 10974 316651 5072 3127 0 0 (radio 2.90% / 2.50% tx 1.79% / 1.54% listen 1.11% / 0.95%)
  9705 P 193.12 5 97831 2359749 48075 28573 0 0 18990 308640 9878 4925 0 0 (radio 3.11% / 4.51% tx 1.95% / 3.01% listen 1.16% / 1.50%)
  10985 P 193.12 6 108074 2677171 52924 32367 0 0 10242 317422 4849 3794 0 0 (radio 3.06% / 2.63% tx 1.90% / 1.47% listen 1.16% / 1.15%)
-------------------------------------
-We lost 14 packets.
-Average RTT was: 0
-------------------------------------
-Test session finished!
