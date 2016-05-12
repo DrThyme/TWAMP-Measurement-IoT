@@ -1,0 +1,41 @@
+using saved target 'z1'
+../../contiki/tools/sky/serialdump-linux -b115200 /dev/ttyUSB1
+Rime started with address 193.12.0.0.0.0.0.33
+MAC c1:0c:00:00:00:00:00:21 Ref ID: 359
+Contiki-3.x-1359-geaa8760 started. Node id is set to 33.
+CSMA ContikiMAC, channel check rate 8 Hz, radio channel 26
+Tentative link-local IPv6 address fe80:0000:0000:0000:c30c:0000:0000:0021
+Starting 'TWAMP UDP Sender Process'
+IPv6 addresses: aaaa::c30c:0:0:21
+fe80::c30c:0:0:21
+Rime started with address 193.12.0.0.0.0.0.33
+MAC c1:0c:00:00:00:00:00:21 Ref ID: 359
+Contiki-3.x-1359-geaa8760 started. Node id is set to 33.
+CSMA ContikiMAC, channel check rate 8 Hz, radio channel 26
+Tentative link-local IPv6 address fe80:0000:0000:0000:c30c:0000:0000:0021
+Starting 'TWAMP UDP Sender Process'
+IPv6 addresses: aaaa::c30c:0:0:21
+fe80::c30c:0:0:21
+Time synch start 
+size of time _pkt: 38 
+receive time: 1398 
+Time synch msg received on port 4321 
+ sent time: 1399 
+Absolute time sent 
+sent time2: 1400 
+receive time: 1414 
+Time synch msg received on port 4321 
+ Time synch done 
+current time: 1415 
+ 3304 P 193.12 0 29201 790048 12827 7237 0 0 29201 790048 12827 7237 0 0 (radio 2.44% / 2.44% tx 1.56% / 1.56% listen 0.88% / 0.88%)
+ 4584 P 193.12 1 46920 1100001 21858 11986 0 0 17717 309953 9031 4749 0 0 (radio 2.95% / 4.20% tx 1.90% / 2.75% listen 1.04% / 1.44%)
+ 5864 P 193.12 2 57291 1417306 25989 16124 0 0 10370 317305 4131 4138 0 0 (radio 2.85% / 2.52% tx 1.76% / 1.26% listen 1.09% / 1.26%)
+ 7146 P 193.12 3 70987 1731883 32183 20868 0 0 13695 314577 6194 4744 0 0 (radio 2.94% / 3.33% tx 1.78% / 1.88% listen 1.15% / 1.44%)
+ 8424 P 193.12 4 82359 2047583 37015 23921 0 0 11371 315700 4832 3053 0 0 (radio 2.86% / 2.41% tx 1.73% / 1.47% listen 1.12% / 0.93%)
+ 9704 P 193.12 5 95253 2362358 42089 27247 0 0 12893 314775 5074 3326 0 0 (radio 2.82% / 2.56% tx 1.71% / 1.54% listen 1.10% / 1.01%)
+ 10984 P 193.12 6 106021 2679264 46610 31214 0 0 10767 316906 4521 3967 0 0 (radio 2.79% / 2.59% tx 1.67% / 1.37% listen 1.12% / 1.21%)
+------------------------------------
+We lost 14 packets.
+Average RTT was: 0
+------------------------------------
+Test session finished!
