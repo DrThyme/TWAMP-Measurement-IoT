@@ -32,117 +32,13 @@
 static struct psock ps;
 
 /*
- * We must have somewhere to put incoming data, and we use a 10 byte
+ * We must have somewhere to put incoming data, and we use a 100 byte
  * buffer for this purpose.
  */
 static uint8_t buffer[100];
+static int state = 1;
 
 static uint8_t mask = 0xFF;
-static int progress = 0;
-/*---------------------------------------------------------------------------*/
-/*
- * A protosocket always requires a protothread. The protothread
- * contains the code that uses the protosocket. We define the
- * protothread here.
- */
-static
-PT_THREAD(handle_connection(struct psock *p))
-{
-  /*
-   * A protosocket's protothread must start with a PSOCK_BEGIN(), with
-   * the protosocket as argument.
-   *
-   * Remember that the same rules as for protothreads apply: do NOT
-   * use local variables unless you are very sure what you are doing!
-   * Local (stack) variables are not preserved when the protothread
-   * blocks.
-   */
-  PSOCK_BEGIN(p);
-  ServerGreeting greet;
-  /*
-   * We start by sending out a welcoming message. The message is sent
-   * using the PSOCK_SEND_STR() function that sends a null-terminated
-   * string.
-   */
-  PSOCK_SEND_STR(p, "Welcome, please type something and press return.\n");
-  
-  /*
-   * Next, we use the PSOCK_READTO() function to read incoming data
-   * from the TCP connection until we get a newline character. The
-   * number of bytes that we actually keep is dependant of the length
-   * of the input buffer that we use. Since we only have a 10 byte
-   * buffer here (the buffer[] array), we can only remember the first
-   * 10 bytes received. The rest of the line up to the newline simply
-   * is discarded.
-   */
-  //PSOCK_READTO(p, '\n');
-  printf("Before read.\n");
-  PSOCK_READBUF_LEN(p,sizeof(greet));
-  memcpy(&greet,buffer,sizeof(greet));
-  printf("Greet modes: %d\n",greet.Modes);
-  int i;
-  for (i = 0; i < 16; i++){
-        printf("%d\n",greet.Challenge[i]);}
-  /*
-   * And we send back the contents of the buffer. The PSOCK_DATALEN()
-   * function provides us with the length of the data that we've
-   * received. Note that this length will not be longer than the input
-   * buffer we're using.
-   */
-  //PSOCK_SEND_STR(p, "Got the following data: ");
-  //PSOCK_SEND(p, buffer, PSOCK_DATALEN(p));
-  //PSOCK_SEND_STR(p, "Good bye!\r\n");
-
-  /*
-   * We close the protosocket.
-   */
-  //PSOCK_CLOSE(p);
-
-  /*
-   * And end the protosocket's protothread.
-   */
-  PSOCK_END(p);
-}
-/*---------------------------------------------------------------------------*/
-static
-PT_THREAD(send_serverGreeting(struct psock *p))
-{
-  PSOCK_BEGIN(p);
-  static ServerGreeting greet;
-  int i;
-  memset(&greet, 0, sizeof(greet));
-  greet.Modes = 5;
-  printf("Greet modes: %d\n",greet.Modes);
-  int r = rand();
-  printf("Greet challenge: ");
-  for (i = 0; i < 16; i++){
-      greet.Challenge[i] = rand() % 16;
-      printf("%d",greet.Challenge[i]);}
-  printf("\nGreet salt: ");
-  for (i = 0; i < 16; i++){
-      greet.Salt[i] = rand() % 16;
-      printf("%d",greet.Salt[i]);}
-  printf("\n");
-  //greet.Count = (1 << 12);
-  PSOCK_SEND(p, &greet, sizeof(greet));
-  //PSOCK_SEND_STR(p, "Hello\n");
-  progress++;
-  PSOCK_END(p);
-}
-/*---------------------------------------------------------------------------*/
-static int
-handle_setupResponse(struct psock *p)
-{
-  PSOCK_BEGIN(p);
-  printf("In setup response.\n");
-
-  SetupResponseUAuth setup;
-  PSOCK_READBUF_LEN(p,2);
-  memcpy(&setup,buffer,sizeof(setup));
-  printf("Client agreed to mode: %d\n",setup.Modes);
-  //progress++;
-  PSOCK_END(p);
-}
 /*---------------------------------------------------------------------------*/
 static uip_ipaddr_t * 
 set_global_address(void)
@@ -167,59 +63,175 @@ set_global_address(void)
   return &ipaddr;
 }
 /*---------------------------------------------------------------------------*/
-static int
-control_server(struct psock *p)
+/*
+ * A protosocket always requires a protothread. The protothread
+ * contains the code that uses the protosocket. We define the
+ * protothread here.
+ */
+static
+PT_THREAD(connection_setup(struct psock *p))
 {
+  /*
+   * A protosocket's protothread must start with a PSOCK_BEGIN(), with
+   * the protosocket as argument.
+   */
   PSOCK_BEGIN(p);
+
+  /*
+   * Here we define all the thread local variables that we need to
+   * utilize.
+   */
   static ServerGreeting greet;
+  static SetupResponseUAuth setup;
+  static ServerStartMsg start;
   static int i;
-  /* We wait until we receive a server greeting from the server.  */
-  //send_serverGreeting(&ps);
+  static int acceptedMode = 1;
+
+  /* 
+   * We configure the Server-Greeting that we want to send. Setting
+   * the accepted modes to those we accept. The following modes are 
+   * meaningful:
+   * 1 - Unauthenticated
+   * 2 - Authenticated
+   * 3 - Encrypted
+   * 0 - Do not wish to communicate.
+   */
   memset(&greet, 0, sizeof(greet));
-  greet.Modes = 5;
-  //printf("Greet modes: %d\n",greet.Modes);
-  int r = rand();
-  //printf("Greet challenge: ");
+  greet.Modes = 1;
+  /*
+   * We generate random sequence of octects for the challenge and
+   * salt. 
+   */
   for (i = 0; i < 16; i++){
       greet.Challenge[i] = rand() % 16;
-      //printf("%d",greet.Challenge[i]);
       }
-  //printf("\nGreet salt: ");
   for (i = 0; i < 16; i++){
       greet.Salt[i] = rand() % 16;
-      //printf("%d",greet.Salt[i]);
       }
-  //printf("\n");
+  /*
+   * Count must be a power of 2 and be at least 1024.
+   */
   //greet.Count = (1 << 12);
+  /*
+   * We set the MBZ octets to zero.
+   */
+  for (i = 0; i < 12; i++){
+    greet.MBZ[i] = 0;
+  }
+
+  /*
+   * Using PSOCK_SEND() we send the Server-Greeting to the connected
+   * client.
+   */
   PSOCK_SEND(p, &greet, sizeof(greet));
 
-  /* Handle setup-response message  */
-  static SetupResponseUAuth setup;
+  /* 
+   * We wait until we receive a server greeting from the server.
+   * PSOCK_NEWDATA(p) returns 1 when new data has arrived in 
+   * the protosocket.  
+   */
   PSOCK_WAIT_UNTIL(p,PSOCK_NEWDATA(p));
   if(PSOCK_NEWDATA(p)){
+    /*
+     * We read data from the buffer now that it has arrived.
+     * Using memcpy we store it in our local variable.
+     */
     PSOCK_READBUF(p);
-    //PSOCK_READBUF_LEN(p,sizeof(setup));
     memcpy(&setup,buffer,sizeof(setup));
-    printf("Client agreed to mode: %d\n",setup.Modes);
+    if(setup.Modes != acceptedMode){
+      printf("Client did not match our modes!\n");
+      PSOCK_CLOSE_EXIT(p);
+    } else{
+      /*
+       * We have agreed upon the mode. Now we send the Server-Start
+       * message.
+       */
+      memset(&start,0,sizeof(start));
+      /* 
+       * We set the MBZ octets to zero.
+       */
+      for (i = 0; i < 15; i++){
+        start.MBZ1[i] = 0;
+      }
+      for (i = 0; i < 8; i++){
+        start.MBZ2[i] = 0;
+      }
+      /*
+       * The accept field is set to zero if the server wishes to continue
+       * communicating. A non-zero value is defined as in RFC 4656.
+       */
+      start.Accept = 0;
+      /*
+       * Timestamp is set to the time the Server started.
+       */
+      double temp;
+      start.timestamp.Second = clock_seconds();
+      temp = (double) clock_time()/CLOCK_SECOND - start.timestamp.Second;
+      start.timestamp.Fraction = temp*1000;
+      /*
+       * Using PSOCK_SEND() we send the Server-Greeting to the connected
+       * client.
+       */
+      PSOCK_SEND(p, &start, sizeof(start));
+      printf("Client agreed to mode: %d\n",setup.Modes);
+    }
   } else {
     printf("Timed out!\n");
   }
-  //memset(&buffer[0], 0, sizeof(buffer));
+  state = 2;
   
+  PSOCK_END(p);
+}
+/*---------------------------------------------------------------------------*/
+static
+PT_THREAD(create_test_session(struct psock *p))
+{
+  /*
+   * A protosocket's protothread must start with a PSOCK_BEGIN(), with
+   * the protosocket as argument.
+   */
+  PSOCK_BEGIN(p);
+
+  /*
+   * Here we define all the thread local variables that we need to
+   * utilize.
+   */
+  static RequestSession request;
   
+  PSOCK_WAIT_UNTIL(p,PSOCK_NEWDATA(p));
+  if(PSOCK_NEWDATA(p)){
+    /*
+     * We read data from the buffer now that it has arrived.
+     * Using memcpy we store it in our local variable.
+     */
+    PSOCK_READBUF(p);
+    memcpy(&request,buffer,sizeof(request));
+    
+    /*
+     * Prints for debugging.
+     */
+    printf("Type: %"PRIu32"\n",request.Type);
+    printf("SenderPort: %"PRIu32"\n",request.SenderPort);
+    printf("ReceiverPort: %"PRIu32"\n",request.RecieverPort);
+    printf("SenderAddress: %s,%s\n",request.SenderAddress,request.SenderMBZ);
+    printf("ReceiverAddress: %s,%s\n",request.RecieverAddress,request.RecieverMBZ);
+  } else {
+    printf("Timed out!\n");
+  }  
+
   PSOCK_END(p);
 }
 /*---------------------------------------------------------------------------*/
 /*
  * We declare the process and specify that it should be automatically started.
  */
-PROCESS(example_psock_server_process, "Example protosocket server");
-AUTOSTART_PROCESSES(&example_psock_server_process);
+PROCESS(twamp_tcp_control_server, "TWAMP TCP Control Server");
+AUTOSTART_PROCESSES(&twamp_tcp_control_server);
 /*---------------------------------------------------------------------------*/
 /*
  * The definition of the process.
  */
-PROCESS_THREAD(example_psock_server_process, ev, data)
+PROCESS_THREAD(twamp_tcp_control_server, ev, data)
 {
   /*
    * The process begins here.
@@ -227,12 +239,13 @@ PROCESS_THREAD(example_psock_server_process, ev, data)
   uip_ipaddr_t *ipaddr;
   
   PROCESS_BEGIN();
+  set_global_address();
   /*
    * We start with setting up a listening TCP port. Note how we're
-   * using the UIP_HTONS() macro to convert the port number (1010) to
+   * using the UIP_HTONS() macro to convert the port number (862) to
    * network byte order as required by the tcp_listen() function.
    */
-  tcp_listen(UIP_HTONS(861));
+  tcp_listen(UIP_HTONS(862));
 
   /*
    * We loop for ever, accepting new connections.
@@ -268,22 +281,18 @@ PROCESS_THREAD(example_psock_server_process, ev, data)
 	 * other processes run while we are waiting.
 	 */
 	PROCESS_WAIT_EVENT_UNTIL(ev == tcpip_event);
-        //printf("Stuff happened!\n");
 	/*
 	 * Here is where the real work is taking place: we call the
 	 * handle_connection() protothread that we defined above. This
 	 * protothread uses the protosocket to receive the data that
 	 * we want it to.
-
 	 */
-        /*if(progress == 0){
-        	send_serverGreeting(&ps);
-	}
-        if(progress == 1){
-        	handle_setupResponse(&ps);
-	}*/
-	control_server(&ps);
-	//handle_connection(&ps);
+	if(state == 1){
+          connection_setup(&ps);
+        }
+        if(state == 2){
+          create_test_session(&ps);
+        }
       }
     }
   }
