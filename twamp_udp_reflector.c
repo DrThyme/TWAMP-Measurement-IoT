@@ -50,9 +50,9 @@
 #include <string.h>
 #include <inttypes.h>
 
-#define UDP_PORT 1234
-#define UDP_SYNCH_PORT 4321
-#define SERVICE_ID 190
+#define UDP_PORT 1443
+#define UDP_SYNCH_PORT 1554
+#define SERVICE_ID 195
 
 #define SEND_INTERVAL		(10 * CLOCK_SECOND)
 #define SEND_TIME		(random_rand() % (SEND_INTERVAL))
@@ -101,7 +101,7 @@ reflect_uauth(struct sender_unauthenticated_test sender_pkt,
   simple_udp_sendto(&unicast_connection, &reflect_pkt, 
 		    sizeof(reflect_pkt), sender_addr);
 
-  /*  printf("Packet reflected to:\n");
+  printf("Packet reflected to:\n");
   uip_debug_ipaddr_print(sender_addr);
   printf("\n#################\n");
   //Prints for debugging
@@ -109,7 +109,8 @@ reflect_uauth(struct sender_unauthenticated_test sender_pkt,
   printf("Seconds: %"PRIu32"\n", sender_pkt.Timestamp.Second);
   printf("Micro: %"PRIu32"\n", sender_pkt.Timestamp.Fraction);
   printf("Error: %"PRIu16"\n", sender_pkt.ErrorEstimate);
-  */ seqno++;
+  
+  seqno++;
 }
 /*---------------------------------------------------------------------------*/
 static void
@@ -168,7 +169,7 @@ receiver(struct simple_udp_connection *c,
   double temp;
 
   //printf("recieved msg at clock time: %d \n",clock_time()-  offset - prop_delay);
-  printf( "%d \n",clock_time()-  offset - prop_delay);
+  //printf( "%d \n",clock_time()-  offset - prop_delay);
     
 
   TWAMPtimestamp ts_rcv;
@@ -178,9 +179,9 @@ receiver(struct simple_udp_connection *c,
   ts_rcv.Second = second;
   ts_rcv.Fraction = temp * 1000;
 
-  //  printf("Data received from ");  
-  // uip_debug_ipaddr_print(sender_addr);
-  // printf(" on port %d from port %d \n", receiver_port, sender_port);
+  printf("Data received from ");  
+  uip_debug_ipaddr_print(sender_addr);
+  printf(" on port %d from port %d \n", receiver_port, sender_port);
   
   if(AUTH_MODE == 0){
     SenderUAuthPacket sender_pkt;
