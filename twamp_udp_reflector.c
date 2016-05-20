@@ -183,6 +183,7 @@ receiver(struct simple_udp_connection *c,
   uip_debug_ipaddr_print(sender_addr);
   printf(" on port %d from port %d \n", receiver_port, sender_port);
   
+  printf("Datalen = %d\n",datalen);
   if(AUTH_MODE == 0){
     SenderUAuthPacket sender_pkt;
     memset(&sender_pkt, 0, sizeof(sender_pkt));
