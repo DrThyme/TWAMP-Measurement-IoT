@@ -211,6 +211,57 @@ static void set_global_address(void)
 }
 /*---------------------------------------------------------------------------*/
 static void
+send_test(int k){
+  if(k == 0){
+		Test1 test1;
+		simple_udp_sendto(&unicast_connection, &test1, sizeof(test1), addr);
+	}
+  if(k == 1){
+		Test2 test2;
+		simple_udp_sendto(&unicast_connection, &test2, sizeof(test2), addr);
+	}
+  if(k == 2){
+		Test3 test3;
+		simple_udp_sendto(&unicast_connection, &test3, sizeof(test3), addr);
+	}
+  if(k == 3){
+		Test4 test4;
+		simple_udp_sendto(&unicast_connection, &test4, sizeof(test4), addr);
+	}
+  if(k == 4){
+		Test5 test5;
+		simple_udp_sendto(&unicast_connection, &test5, sizeof(test5), addr);
+	}
+  if(k == 5){
+		Test6 test6;
+		simple_udp_sendto(&unicast_connection, &test6, sizeof(test6), addr);
+	}
+  if(k == 6){
+		Test7 test7;
+		simple_udp_sendto(&unicast_connection, &test7, sizeof(test7), addr);
+	}
+  if(k == 7){
+		Test8 test8;
+		simple_udp_sendto(&unicast_connection, &test8, sizeof(test8), addr);
+	}
+  if(k == 8){
+		Test9 test9;
+		simple_udp_sendto(&unicast_connection, &test9, sizeof(test9), addr);
+	}
+}
+/*---------------------------------------------------------------------------*/
+static void receiver_test(struct simple_udp_connection *c,
+		const uip_ipaddr_t *sender_addr,
+		uint16_t sender_port,
+		const uip_ipaddr_t *receiver_addr,
+		uint16_t receiver_port,
+		const uint8_t *data,
+		uint16_t datalen)
+{
+	//do nothing
+}
+/*---------------------------------------------------------------------------*/
+static void
 send_to_unauth(){
 	static struct sender_unauthenticated_test pkt;
 	static struct TWAMPtimestamp t;
@@ -386,7 +437,7 @@ PROCESS_THREAD(twamp_udp_sender, ev, data){
 
 
 	simple_udp_register(&unicast_connection, UDP_PORT,
-			NULL, UDP_PORT, receiver);
+			NULL, UDP_PORT, receiver_test);
 
 	etimer_set(&periodic_timer, SEND_INTERVAL);
 	if(TEST_SESSION == 0){
@@ -414,15 +465,16 @@ PROCESS_THREAD(twamp_udp_sender, ev, data){
 		static int i;
 		static int k = 0;
 		static int num;
+		static int time;
 		static int powertrace_on;
 		static int flag;
 		SENSORS_ACTIVATE(button_sensor);
 		leds_toggle(LEDS_BLUE);
 		PROCESS_WAIT_EVENT_UNTIL((ev==sensors_event) && (data == &button_sensor));
 		leds_toggle(LEDS_BLUE);
-		while(k < 5){
+		while(k < 9){
 			num = 0;
-			while(num < 2){
+			while(num < 25){
 				i = 0;
 				powertrace_on = 0;
 				flag = 1;
@@ -442,21 +494,24 @@ PROCESS_THREAD(twamp_udp_sender, ev, data){
 					}
 				}
 				etimer_set(&periodic_timer, SEND_INTERVAL);
-				while(i < TEST_AMOUNT+(10*k)) {
+				while(i < TEST_AMOUNT) {
 					if(powertrace_on == 0){
 						if(POWERTRACE == 1){
 							powertrace_start(CLOCK_SECOND * 2);
 							powertrace_on = 1;
 						}
 					}
+					time = (SEND_INTERVAL)/2;
 					PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
 
 					etimer_reset(&periodic_timer);
-					etimer_set(&send_timer, SEND_TIME);
+					etimer_set(&send_timer, time);
 
 					PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&send_timer));
+					etimer_restart(&send_timer);
 					if(AUTH_MODE == 0){
-						send_to_unauth();
+						//send_to_unauth();
+						send_test(k);
 						i++;
 					}
 					else if(AUTH_MODE == 1){
@@ -475,7 +530,8 @@ PROCESS_THREAD(twamp_udp_sender, ev, data){
 				//printf("Test session finished!\n");
 				//SENSORS_DEACTIVATE(button_sensor);
 			}
-			printf(" ***** N NewSession TEST AMOUNT %d *****\n",TEST_AMOUNT+(10*k));
+			//printf(" ***** N NewSession TEST AMOUNT %d *****\n",TEST_AMOUNT+(10*k));
+			printf(" ***** N NewSession PACKET SIZE %d *****\n",10+(10*k));
 			k++;
 		}
 		leds_toggle(LEDS_GREEN);
