@@ -67,7 +67,7 @@
 #define TEST_SESSION 1
 #define TEST_AMOUNT 10
 
-#define POWERTRACE 1
+#define POWERTRACE 0
 
 static struct simple_udp_connection unicast_connection;
 static struct simple_udp_connection unicast_synch_connection;
@@ -77,7 +77,8 @@ static struct etimer time_synch;
 static unsigned int seq_id;
 static uip_ipaddr_t *addr;
 
-static clock_time_t start_time;
+//static clock_time_t start_time;
+static unsigned int start_time;
 
 static int rcv_num_pkt = 0; 
 static int total_rtt = 0;
@@ -115,9 +116,10 @@ static void receive_unauth(struct reflector_unauthenticated_test reflect_pkt){
 			second_temp = second_temp - 1;
 			micro_temp = 1000 + micro_temp;
 		}
-		printf("RTT was: %"PRIu32".%"PRIu32" seconds.", second_temp, micro_temp);
+		printf("RTT was: %"PRIu32".%"PRIu32" seconds.\n", second_temp, micro_temp);
 		//printf("RTT was: %"PRIu32".%"PRIu32" seconds.", (reflect_pkt.Timestamp.Second - reflect_pkt.SenderTimestamp.Second), (reflect_pkt.Timestamp.Fraction - reflect_pkt.SenderTimestamp.Fraction));
 	}
+
 }
 /*---------------------------------------------------------------------------*/
 static void receive_auth(struct reflector_authenticated_test reflect_pkt){
@@ -161,6 +163,23 @@ static void receiver(struct simple_udp_connection *c,
 		const uint8_t *data,
 		uint16_t datalen)
 {
+  static int cl_temp;
+  static int cl_sec;
+  unsigned int second;
+  double temp;
+  unsigned int clock;
+  
+	cl_sec = clock_seconds();
+  clock = clock_time();
+  //cl_temp = (cl_sec % 510)-255;
+  //if(cl_temp > 0){
+  //  clock = abs(clock-32767);
+  //}
+  second = (clock - start_time)/CLOCK_SECOND;
+  temp = (double) (clock - start_time)/CLOCK_SECOND - second;
+
+  //printf("clock_time: %d\n",clock_time());
+  //printf("clock_time: %u\n",clock_time());
 
 	/*	
 		printf("received msg on clock time: %d",clock_time());
@@ -177,7 +196,30 @@ static void receiver(struct simple_udp_connection *c,
 		if(TEST_SESSION == 0) receive_unauth(reflect_pkt);
 		if(TEST_SESSION == 1){
 			total_rtt += (reflect_pkt.Timestamp.Second - reflect_pkt.SenderTimestamp.Second);
-			rcv_num_pkt++;
+			rcv_num_pkt = rcv_num_pkt+1;
+			unsigned int rtt_sec = second - reflect_pkt.SenderTimestamp.Second;
+			unsigned int rtt_fraction = temp*1000 - reflect_pkt.SenderTimestamp.Fraction;
+			if(rtt_fraction < 0){
+      	rtt_sec = rtt_sec - 1;
+      	rtt_fraction = 1000 + rtt_fraction;
+    	}
+		
+			/*printf("Second: %d, SenderTimestamp: %"PRIu32"\n",second,reflect_pkt.SenderTimestamp.Second);
+			printf("Fraction: %d, SenderTimestamp: %"PRIu32"\n",(int)(temp*1000),reflect_pkt.SenderTimestamp.Fraction);
+			printf("RTT was: %d.%03d seconds.\n", rtt_sec, rtt_fraction);*/
+			printf("%u.%03u,", rtt_sec, rtt_fraction);
+
+			rtt_sec = reflect_pkt.ReceiverTimestamp.Second - reflect_pkt.SenderTimestamp.Second;
+			rtt_fraction = reflect_pkt.ReceiverTimestamp.Fraction - reflect_pkt.SenderTimestamp.Fraction;
+			if(rtt_fraction < 0){
+      	rtt_sec = rtt_sec - 1;
+      	rtt_fraction = 1000 + rtt_fraction;
+    	}
+			/*printf("Second: %"PRIu32", SenderTimestamp: %"PRIu32"\n",reflect_pkt.ReceiverTimestamp.Second,reflect_pkt.SenderTimestamp.Second);
+			printf("Fraction: %"PRIu32", SenderTimestamp: %"PRIu32"\n",reflect_pkt.ReceiverTimestamp.Fraction,reflect_pkt.SenderTimestamp.Fraction);
+			printf("One-way was: %d.%03d seconds.\n", rtt_sec, rtt_fraction);
+			printf("-------------------------------------\n");*/
+			printf("%u.%03u\n", rtt_sec, rtt_fraction);
 		} 
 	}
 	else if(AUTH_MODE == 1){
@@ -265,9 +307,11 @@ static void
 send_to_unauth(){
 	static struct sender_unauthenticated_test pkt;
 	static struct TWAMPtimestamp t;
-	int second;
+  static int cl_temp;
+  static int cl_sec;
+	unsigned int second;
 	double temp;
-	int clock;
+	unsigned int clock;
 	pkt.SeqNo = seq_id;
 	pkt.ErrorEstimate = 666;
 	/*printf("Sending unicast to ");
@@ -277,13 +321,16 @@ send_to_unauth(){
 	//printf("Size of send pkt: %d \n",sizeof(pkt));
 
 	seq_id++;
+	cl_sec = clock_seconds();
 	clock = clock_time();
+	//cl_temp = (cl_sec % 510)-255;
+	//if(cl_temp > 0){
+	//	clock = abs(clock-32767);
+	//}
 	second = (clock - start_time)/CLOCK_SECOND;
 	temp = (double) (clock - start_time)/CLOCK_SECOND - second;
 	t.Second = second;
 	t.Fraction = temp * 1000;
-	/*printf("Second: %d\n", t.Second);
-	  printf("Fraction: %d\n", t.Fraction);*/
 
 	//t.Second = clock_time() - start_time;
 	//t.Fraction = 0;
@@ -321,8 +368,8 @@ send_to_auth(){
 
 }
 /*---------------------------------------------------------------------------*/
-static void print_statistics(){
-	int pkt_success = TEST_AMOUNT - rcv_num_pkt - 1;
+static void print_statistics(int total){
+	int pkt_success = TEST_AMOUNT*total - rcv_num_pkt - 1;
 	int avg_rtt = total_rtt/rcv_num_pkt;
 	printf("------------------------------------\n");
 	printf("We lost %d packets.\n", pkt_success);
@@ -407,13 +454,16 @@ static void timesynch(){
 PROCESS_THREAD(twamp_udp_sender, ev, data){
 	static struct etimer periodic_timer;
 	static struct etimer send_timer;
-	static double test;
-	static int test2;
+	static int cl_temp;
+	static int cl_sec;
+	static int cl_time;
+	static int flag;
 
+	static int runs = 1;
+	static int iter = 10;
 
 	PROCESS_BEGIN();
 	SENSORS_ACTIVATE(button_sensor);
-
 
 	servreg_hack_init();
 
@@ -427,26 +477,35 @@ PROCESS_THREAD(twamp_udp_sender, ev, data){
 	simple_udp_register(&unicast_synch_connection, UDP_TIMESYNCH_PORT,
 			NULL, UDP_TIMESYNCH_PORT, timesynch_receiver);
 
+  flag=1;
 	etimer_set(&time_synch, SYNCH_INTERVAL);
-	PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&time_synch));
-	etimer_reset(&time_synch);
-
-	addr = servreg_hack_lookup(SERVICE_ID);
+  while(flag){
+		PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&time_synch));
+		etimer_reset(&time_synch);
+		addr = servreg_hack_lookup(SERVICE_ID);
+		if(addr != NULL){
+			flag = 0;
+		} else{
+			printf("Service %d not found, retrying!\n", SERVICE_ID);
+		}
+	}
 
 	timesynch();
 
 
 	simple_udp_register(&unicast_connection, UDP_PORT,
-			NULL, UDP_PORT, receiver_test);
+			NULL, UDP_PORT, receiver);
 
 	etimer_set(&periodic_timer, SEND_INTERVAL);
 	if(TEST_SESSION == 0){
 		while(1) {
 			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&periodic_timer));
 			etimer_reset(&periodic_timer);
-			etimer_set(&send_timer, SEND_TIME);
+			etimer_set(&send_timer, SEND_INTERVAL);
+			//etimer_set(&send_timer, SEND_TIME);
 
 			PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&send_timer));
+			etimer_restart(&send_timer);
 			addr = servreg_hack_lookup(SERVICE_ID);
 			if(addr != NULL) {
 				if(AUTH_MODE == 0){
@@ -467,14 +526,13 @@ PROCESS_THREAD(twamp_udp_sender, ev, data){
 		static int num;
 		static int time;
 		static int powertrace_on;
-		static int flag;
 		SENSORS_ACTIVATE(button_sensor);
 		leds_toggle(LEDS_BLUE);
 		PROCESS_WAIT_EVENT_UNTIL((ev==sensors_event) && (data == &button_sensor));
 		leds_toggle(LEDS_BLUE);
-		while(k < 9){
+		while(k < runs){
 			num = 0;
-			while(num < 25){
+			while(num < iter){
 				i = 0;
 				powertrace_on = 0;
 				flag = 1;
@@ -510,8 +568,8 @@ PROCESS_THREAD(twamp_udp_sender, ev, data){
 					PROCESS_WAIT_EVENT_UNTIL(etimer_expired(&send_timer));
 					etimer_restart(&send_timer);
 					if(AUTH_MODE == 0){
-						//send_to_unauth();
-						send_test(k);
+						send_to_unauth();
+						//send_test(k);
 						i++;
 					}
 					else if(AUTH_MODE == 1){
@@ -525,13 +583,14 @@ PROCESS_THREAD(twamp_udp_sender, ev, data){
 				if(POWERTRACE == 1){
 					powertrace_stop();
 				}
-				printf(" ***** R NewRepeat Iteration %d *****\n",num+1);
+				//printf(" ***** R NewRepeat Iteration %d *****\n",num+1);
 				num++;
 				//printf("Test session finished!\n");
 				//SENSORS_DEACTIVATE(button_sensor);
 			}
+			printf(" ***** N NewSession SIZE *****\n");
 			//printf(" ***** N NewSession TEST AMOUNT %d *****\n",TEST_AMOUNT+(10*k));
-			printf(" ***** N NewSession PACKET SIZE %d *****\n",10+(10*k));
+			//printf(" ***** N NewSession PACKET SIZE %d *****\n",10+(10*k));
 			k++;
 		}
 		leds_toggle(LEDS_GREEN);
@@ -542,7 +601,7 @@ PROCESS_THREAD(twamp_udp_sender, ev, data){
 		printf("Service %d not found\n", SERVICE_ID);
 	}
 
-	print_statistics();
+	print_statistics(runs*iter);
 	printf("Test session finished!\n");
 
 

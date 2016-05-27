@@ -62,7 +62,7 @@ static struct simple_udp_connection unicast_synch_connection;
 
 static uint32_t seqno = 0;
 static int AUTH_MODE = 0;
-static clock_time_t start_time;
+static unsigned int start_time;
 
 static int authority_level;
 static rtimer_clock_t offset;
@@ -77,8 +77,10 @@ reflect_uauth(struct sender_unauthenticated_test sender_pkt,
 	      struct TWAMPtimestamp ts_rcv,
               const uip_ipaddr_t *sender_addr)
 {
-  int clock;
-  int second;
+  static int cl_temp;
+  static int cl_sec;
+  unsigned int clock;
+  unsigned int second;
   double temp;
   //TODO: Set all MBZs to zero!
   ReflectorUAuthPacket reflect_pkt;
@@ -91,8 +93,14 @@ reflect_uauth(struct sender_unauthenticated_test sender_pkt,
   reflect_pkt.SenderErrorEstimate = sender_pkt.ErrorEstimate;
   reflect_pkt.SenderTTL = 255;
 
+  cl_sec = clock_seconds();
+  clock = clock_time() - offset;
+  //cl_temp = (cl_sec % 510)-255;
 
-  clock = clock_time()- offset;
+  //if(cl_temp > 0){
+  //  clock = abs(clock-32767);
+  //}
+
   second = (clock - start_time)/CLOCK_SECOND;
   temp = (double) (clock - start_time)/CLOCK_SECOND - second;
   reflect_pkt.Timestamp.Second = second;
@@ -164,8 +172,10 @@ receiver(struct simple_udp_connection *c,
 	 const uint8_t *data,
          uint16_t datalen)
 {
-  int clock;
-  int second;
+  static int cl_temp;
+  static int cl_sec;
+  unsigned int clock;
+  unsigned int second;
   double temp;
 
   //printf("recieved msg at clock time: %d \n",clock_time()-  offset - prop_delay);
@@ -173,7 +183,14 @@ receiver(struct simple_udp_connection *c,
     
 
   TWAMPtimestamp ts_rcv;
+  cl_sec = clock_seconds();
   clock = clock_time() - offset;
+  //cl_temp = (cl_sec % 510)-255;
+
+  //if(cl_temp > 0){
+  //  clock = abs(clock-32767);
+  //}
+
   second = (clock - start_time)/CLOCK_SECOND;
   temp = (double) (clock - start_time)/CLOCK_SECOND - second;
   ts_rcv.Second = second;
@@ -251,7 +268,7 @@ adjust_offset(rtimer_clock_t startup_time, rtimer_clock_t processing_time,
   prop_delay = (local_time - startup_time - processing_time)/2;
    
   offset = local_time - absolute_time - prop_delay;  
-  /*
+  
   printf("##########################################\n");
   printf("Startup_time: %d \n", startup_time);
   printf("processing_time: %d\n",processing_time);
@@ -261,7 +278,7 @@ adjust_offset(rtimer_clock_t startup_time, rtimer_clock_t processing_time,
   printf("Propagation_delay: %d \n", prop_delay);
   printf("##########################################\n");
   printf("offset: %d \n", offset);
-  */
+  
 }
 
 
@@ -306,11 +323,7 @@ static timesynch(struct simple_udp_connection *c,
 
     printf("Time synch complete \n");
     printf("Current time: %d offset: %d \n",clock_time(), offset);
-    
-
   }
- 
-
 }
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(twamp_udp_reflector, ev, data)
