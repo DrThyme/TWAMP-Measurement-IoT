@@ -20,6 +20,8 @@ static struct psock ps;
 static uint8_t buffer[100];
 static int state = 1;
 
+static uip_ipaddr_t addr;
+
 PROCESS(twamp_tcp_control_client, "TWAMP TCP Control Client");
 AUTOSTART_PROCESSES(&twamp_tcp_control_client);
 /*---------------------------------------------------------------------------*/
@@ -141,6 +143,7 @@ PT_THREAD(create_test_session(struct psock *p))
    * utilize.
    */
   static RequestSession request;
+  static AcceptSession accept;
 
   memset(&request, 0, sizeof(request));
   request.Type = 1;
@@ -151,15 +154,16 @@ PT_THREAD(create_test_session(struct psock *p))
   request.NumOfPackets = 15;
   request.SenderPort = 2222;
   request.RecieverPort = 3333;
-  /*if(request.IPVN == 4){
+
+  if(request.IPVN == 4){
     //currently not implemented.
   } else{
-    request.SenderAddress = "0xfe80,0x0000,0x0000,0x0000"; 
-    request.SenderMBZ = "0xc30c,0x0000,0x0000,0x0002"; 
-    request.RecieverAddress = "0xfe80,0x0000,0x0000,0x0000"; 
-    request.RecieverMBZ = "0xc30c,0x0000,0x0000,0x0001"; 
-  }*/
-  //request.SID = 0;
+    request.SenderAddress = (uint32_t)0; 
+    request.SenderMBZ[0] = 0; 
+    request.RecieverAddress = (uint32_t)0; 
+    request.RecieverMBZ[0] = 0; 
+  }
+  request.SID[0] = 0;
   request.PaddingLen = 28;
   request.StartTime.Second = 30;
   request.StartTime.Fraction = 0;
@@ -169,6 +173,22 @@ PT_THREAD(create_test_session(struct psock *p))
 
   PSOCK_SEND(p, &request, sizeof(request));
 
+  PSOCK_WAIT_UNTIL(p,PSOCK_NEWDATA(p));
+  if(PSOCK_NEWDATA(p)){
+    /*
+     * We read data from the buffer now that it has arrived.
+     * Using memcpy we store it in our local variable.
+     */
+    PSOCK_READBUF(p);
+    memcpy(&accept,buffer,sizeof(accept));
+    if(accept.Accept != 0){
+      PSOCK_CLOSE_EXIT(p);
+    } else {
+      printf("Server accepted, got port: %d\n",accept.Port);
+    }
+  } else{
+    printf("Timed out!");
+  }
   PSOCK_END(p);
 }
 /*---------------------------------------------------------------------------*/
@@ -196,7 +216,6 @@ static void set_global_address(void)
 /*---------------------------------------------------------------------------*/
 PROCESS_THREAD(twamp_tcp_control_client, ev, data)
 {
-  uip_ipaddr_t addr;
 
   PROCESS_BEGIN();
 
@@ -205,6 +224,13 @@ PROCESS_THREAD(twamp_tcp_control_client, ev, data)
   uip_ip6addr(&addr, 0xfe80, 0, 0, 0, 0xc30c, 0, 0, 2);
   uip_debug_ipaddr_print(addr);
   printf("\n");
+  uint16_t a;
+  a = (addr.u8[0] << 8) + addr.u8[1];
+  printf("Test: %x\n",a);
+  int i; 
+  for(i=0; i<16;i++){
+    printf("%02x", addr.u8[i]);
+  }
 
   /*
    * We start with connecting to the server using the 

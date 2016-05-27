@@ -169,7 +169,7 @@ PT_THREAD(connection_setup(struct psock *p))
       temp = (double) clock_time()/CLOCK_SECOND - start.timestamp.Second;
       start.timestamp.Fraction = temp*1000;
       /*
-       * Using PSOCK_SEND() we send the Server-Greeting to the connected
+       * Using PSOCK_SEND() we send the Server-Start to the connected
        * client.
        */
       PSOCK_SEND(p, &start, sizeof(start));
@@ -197,6 +197,7 @@ PT_THREAD(create_test_session(struct psock *p))
    * utilize.
    */
   static RequestSession request;
+  static AcceptSession accept;
   
   PSOCK_WAIT_UNTIL(p,PSOCK_NEWDATA(p));
   if(PSOCK_NEWDATA(p)){
@@ -213,8 +214,14 @@ PT_THREAD(create_test_session(struct psock *p))
     printf("Type: %"PRIu32"\n",request.Type);
     printf("SenderPort: %"PRIu32"\n",request.SenderPort);
     printf("ReceiverPort: %"PRIu32"\n",request.RecieverPort);
-    printf("SenderAddress: %s,%s\n",request.SenderAddress,request.SenderMBZ);
-    printf("ReceiverAddress: %s,%s\n",request.RecieverAddress,request.RecieverMBZ);
+    printf("SenderAddress: %08x,%x\n",request.SenderAddress,request.SenderMBZ);
+    printf("ReceiverAddress: %08x,%x\n",request.RecieverAddress,request.RecieverMBZ);
+    
+    accept.Accept = 0;
+    accept.Port = request.RecieverPort; 
+
+    PSOCK_SEND(p, &accept, sizeof(accept));
+    PSOCK_SEND(p, &accept, sizeof(accept));
   } else {
     printf("Timed out!\n");
   }  
